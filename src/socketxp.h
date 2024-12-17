@@ -49,8 +49,8 @@ sxpResult sxp_addrinfo_get(addrinfo_t **results, const char *maybe_hostname, con
 sxpResult sxp_addrinfo_free(addrinfo_t *info);
 
 /*server-side API*/
-sxpResult sxp_bind(sxp_t *sock, sockaddr_t *address, size_t addrlen);
-sxpResult sxp_listen(sxp_t *sock);
+sxpResult sxp_bind(sxp_t *sock, const sockaddr_t *address, size_t addrlen);
+sxpResult sxp_listen(sxp_t *sock, size_t backlog);
 sxpResult sxp_accept(sxp_t *sock, sxp_t *newsock);
 
 /*client-side API*/
@@ -58,7 +58,7 @@ sxpResult sxp_connect(sxp_t *sock, sockaddr_t *address, size_t addrlen);
 
 /*any-side API*/
 sxpResult sxp_send(sxp_t *sock, const char *data, size_t size);
-sxpResult sxp_recv(sxp_t *sock, char *data, size_t size);
+sxpResult sxp_recv(sxp_t *sock, char *data, size_t *num_read, size_t size);
 
 sxpResult sxp_poll(size_t /*maybe NULL*/ *results, pollsxp_t sxps[], size_t sxpcount, int timeout);
 
