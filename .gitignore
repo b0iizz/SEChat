@@ -1,3 +1,6 @@
+# Binary
+sechat
+
 # Prerequisites
 *.d
 
@@ -50,3 +53,9 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+#Cmake files
+CMakeFiles/*
+CMakeCache.txt
+*.cmake
+Makefile
