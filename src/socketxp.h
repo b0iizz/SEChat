@@ -5,9 +5,24 @@
 
 /*sxp_t, pollsxp_t, addrinfo_t, sockaddr_t*/
 #if defined(WIN32) || defined(_WIN32) || defined(_WIN64)
-#include "windows/socket_win.h"
+
 #else
-#include "unix/socket_unix.h"
+
+#ifndef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 200112L
+#endif /*_POSIX_C_SOURCE*/
+
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/poll.h>
+#include <netdb.h>
+
+typedef int sxp_t;
+typedef struct pollfd pollsxp_t;
+typedef struct addrinfo addrinfo_t;
+typedef struct sockaddr sockaddr_t;
 #endif
 
 typedef int sxpResult;
