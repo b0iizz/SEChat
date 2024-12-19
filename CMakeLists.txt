@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.10)
 project(SEChat)
 
 set(CMAKE_C_STANDARD 90)
@@ -16,6 +16,7 @@ if(WIN32)
 elseif(UNIX)
   set(platform_sources
     src/unix/socket.c
+    src/unix/terminal.c
   )
 endif()
 
