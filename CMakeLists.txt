@@ -7,6 +7,7 @@ set(CMAKE_C_COMPILER gcc)
 
 set(sources
   src/main.c
+  src/interface.c
 )
 
 if(WIN32)
