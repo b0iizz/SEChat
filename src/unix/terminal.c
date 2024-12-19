@@ -1,24 +1,29 @@
 #include "terminalxp.h"
 
+static int terminal_fd = -1;
+static term_state_t terminal_reset_state = {0};
+
 txpResult txp_init() {
+  if ((terminal_fd = open("/dev/tty", O_RDWR | O_NONBLOCK)) < 0) return TXP_ERROR;
+  return TXP_SUCCESS;
 }
 txpResult txp_exit() {
+  if (close(terminal_fd) < 0) return TXP_ERROR;
+  return TXP_SUCCESS;
 }
 
 txpResult txp_state_get(term_state_t *save) {
-  return tcgetattr(STDIN_FILENO, save) < 0 ? TXP_ERROR : TXP_SUCCESS;
+  return tcgetattr(terminal_fd, save) < 0 ? TXP_ERROR : TXP_SUCCESS;
 }
 txpResult txp_state_set(term_state_t *save) {
-  return tcsetattr(STDIN_FILENO, TCSAFLUSH,  save) < 0 ? TXP_ERROR : TXP_SUCCESS;
+  return tcsetattr(terminal_fd, TCSAFLUSH,  save) < 0 ? TXP_ERROR : TXP_SUCCESS;
 }
-
-static term_state_t reset_terminal_state = {0};
 
 txpResult txp_start() {
   term_state_t to_modify, read;
   txpResult result;
   if ((result = txp_state_get(&read)) != TXP_SUCCESS) return result;
-  reset_terminal_state = read;
+  terminal_reset_state = read;
   to_modify = read;
 
   to_modify.c_iflag &= ~IGNCR;
@@ -38,7 +43,7 @@ txpResult txp_start() {
 
 
 txpResult txp_stop() {
-  txpResult result = txp_state_set(&reset_terminal_state);
+  txpResult result = txp_state_set(&terminal_reset_state);
   if (result != TXP_SUCCESS) return result;
   return TXP_SUCCESS;
 }
@@ -50,14 +55,14 @@ txpResult txp_send(const char *str) {
 
 txpResult txp_recv(char *buffer, size_t *nread, size_t blen) {
   ssize_t status;
-  if((status = read(STDIN_FILENO, buffer, blen)) < 0) return TXP_ERROR;
+  if((status = read(terminal_fd, buffer, blen)) < 0) return TXP_ERROR;
   *nread = status;
   if (status == 0) return TXP_TRY_AGAIN;
   return TXP_SUCCESS;
 }
 
 txpResult txp_flush() {
-  if (tcflush(STDIN_FILENO, TCIFLUSH) < 0) return TXP_ERROR;
+  if (tcflush(terminal_fd, TCIFLUSH) < 0) return TXP_ERROR;
   return TXP_SUCCESS;
 }
 
