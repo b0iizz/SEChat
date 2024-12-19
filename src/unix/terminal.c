@@ -1,5 +1,10 @@
 #include "terminalxp.h"
 
+txpResult txp_init() {
+}
+txpResult txp_exit() {
+}
+
 txpResult txp_state_get(term_state_t *save) {
   return tcgetattr(STDIN_FILENO, save) < 0 ? TXP_ERROR : TXP_SUCCESS;
 }

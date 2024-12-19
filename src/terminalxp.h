@@ -2,6 +2,7 @@
 #define TERMINALXP_H_
 
 #if defined(WIN32) || defined(_WIN32) || defined(_WIN64)
+
 #else
 
 #include <string.h>
@@ -23,6 +24,9 @@ enum txpresults {
   TXP_TRY_AGAIN = 1,
   TXP_ERROR = -1
 };
+
+txpResult txp_init();
+txpResult txp_exit();
 
 txpResult txp_state_get(term_state_t *save);
 txpResult txp_state_set(term_state_t *save);
