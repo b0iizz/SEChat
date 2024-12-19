@@ -29,4 +29,4 @@ if(WIN32)
   target_link_libraries(sechat wsock32 ws2_32)
 endif()
 
-install(TARGETS sechat DESTINATION sechat)
+install(TARGETS sechat DESTINATION bin)
