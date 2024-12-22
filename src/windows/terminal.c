@@ -139,6 +139,7 @@ txpResult txp_recv(char *buffer, size_t *nread, size_t blen)
         if (!ReadConsoleInput(terminal_con_in, &input, 1, &did_read) || did_read <= 0)
           return TXP_ERROR;
         can_read--;
+        break;
       default:
         if (!ReadConsoleInput(terminal_con_in, &input, 1, &did_read) || did_read <= 0)
           return TXP_ERROR;
