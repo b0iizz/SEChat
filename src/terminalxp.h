@@ -3,12 +3,21 @@
 
 #if defined(WIN32) || defined(_WIN32) || defined(_WIN64)
 
+#include <stdio.h>
+#include <string.h>
+#include <windows.h>
+#include <conio.h>
+
+typedef struct {
+  DWORD input_mode;
+  DWORD output_mode;
+} term_state_t;
+
 #else
 
 #include <string.h>
 #include <stdio.h>
 #include <fcntl.h>
-#include <poll.h>
 #include <sys/types.h>
 #include <termios.h>
 #include <unistd.h>

@@ -3,7 +3,6 @@ project(SEChat)
 
 set(CMAKE_C_STANDARD 90)
 set(CMAKE_C_STANDARD_REQUIRED TRUE)
-set(CMAKE_C_COMPILER gcc)
 
 set(sources
   src/main.c
@@ -12,7 +11,7 @@ set(sources
 
 if(WIN32)
   set(platform_sources
-    src/windows/socket.c
+    src/windows/terminal.c
   )
 elseif(UNIX)
   set(platform_sources
@@ -28,6 +27,7 @@ target_include_directories(sechat PUBLIC src)
 
 if(WIN32)
   target_link_libraries(sechat wsock32 ws2_32)
+  target_link_libraries(sechat -static)
 endif()
 
 install(TARGETS sechat DESTINATION bin)

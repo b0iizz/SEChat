@@ -20,10 +20,21 @@ static char *messages[MAX_LINES] = {0};
 static int messages_count = 0;
 static int messages_scroll = 0;
 static int messages_dirty = 1;
+#if defined(WIN32) || defined(_WIN32) || defined(_WIN64)
+#define MESSAGES_DIRTY 1
+#else
+#define MESSAGES_DIRTY messages_dirty
+#endif
 
 static char inputs[INPUT_LENGTH] = {0};
 static int inputs_cursor = 0;
 static int inputs_dirty = 1;
+#if defined(WIN32) || defined(_WIN32) || defined(_WIN64)
+#define INPUTS_DIRTY 1
+#else
+#define INPUTS_DIRTY inputs_dirty
+#endif
+
 
 static char actions[INPUT_LENGTH] = {0};
 static int actions_dirty = 1;
@@ -31,6 +42,11 @@ static int actions_dirty = 1;
 static char *status = NULL;
 static char *status_info = NULL;
 static int status_dirty = 1;
+#if defined(WIN32) || defined(_WIN32) || defined(_WIN64)
+#define STATUS_DIRTY 1
+#else
+#define STATUS_DIRTY status_dirty
+#endif
 
 
 static uiResult bounds_tick();
