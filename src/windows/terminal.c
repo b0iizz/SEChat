@@ -1,8 +1,11 @@
 #include "terminalxp.h"
+#include <time.h>
 
 static term_state_t terminal_reset_state = {0};
 static HANDLE terminal_con_in;
 static HANDLE terminal_con_out;
+
+static time_t terminal_last_bounds_time = 0;
 
 static txpResult map_key(char *buf, size_t *nread, size_t blen, int keycode);
 
@@ -103,18 +106,31 @@ txpResult txp_recv(char *buffer, size_t *nread, size_t blen)
 {
   DWORD can_read, did_read;
   INPUT_RECORD input;
+  char buf[11];
+  CONSOLE_SCREEN_BUFFER_INFO info;
   *nread = 0;
 
-  /*Maybe use WaitForSingleObject here aswell...*/
   if (!GetNumberOfConsoleInputEvents(terminal_con_in, &can_read)) return TXP_ERROR;
-  if (can_read <= 0) return TXP_TRY_AGAIN;
+  if (can_read <= 0) {
+    /*Maybe we can send terminal size info instead?*/
+    time_t current_time = time(NULL);
+    if (blen < 10 || current_time - terminal_last_bounds_time < 1) return TXP_TRY_AGAIN;
+
+    if (!GetConsoleScreenBufferInfo(terminal_con_out, &info)) return TXP_TRY_AGAIN;
+
+    sprintf(buf, "\033[%i;%iR", info.dwSize.Y, info.dwSize.X);
+    memcpy(buffer, buf, strlen(buf));
+    *nread = strlen(buf);
+
+    terminal_last_bounds_time = current_time;
+    return TXP_SUCCESS;
+  }
   while (can_read > 0 && *nread < blen) {
     if (!PeekConsoleInput(terminal_con_in, &input, 1, &did_read) || did_read <= 0) return TXP_ERROR;
     switch (input.EventType) {
       int code;
       char ascii;
       txpResult mapResult;
-      char buf[11];
       case KEY_EVENT:
         code = input.Event.KeyEvent.wVirtualKeyCode;
         ascii = input.Event.KeyEvent.uChar.AsciiChar;
@@ -132,10 +148,11 @@ txpResult txp_recv(char *buffer, size_t *nread, size_t blen)
         can_read--;
         break;
       case WINDOW_BUFFER_SIZE_EVENT:
-         sprintf(buf, "\033[%i;%iR", input.Event.WindowBufferSizeEvent.dwSize.X, input.Event.WindowBufferSizeEvent.dwSize.Y);
-         if (*nread + strlen(buf) >= blen) return TXP_SUCCESS; /*Prevent Event from being consumed*/
-         memcpy(buf + *nread, buf, strlen(buf));
-         *nread += strlen(buf);
+        sprintf(buf, "\033[%i;%iR", input.Event.WindowBufferSizeEvent.dwSize.Y,
+                input.Event.WindowBufferSizeEvent.dwSize.X);
+        if (*nread + strlen(buf) >= blen) return TXP_SUCCESS; /*Prevent Event from being consumed*/
+        memcpy(buffer + *nread, buf, strlen(buf));
+        *nread += strlen(buf);
         if (!ReadConsoleInput(terminal_con_in, &input, 1, &did_read) || did_read <= 0)
           return TXP_ERROR;
         can_read--;
