@@ -12,7 +12,7 @@
 #define INPUT_LINE terminal_height
 #define STATUS_LINE 1
 
-static int terminal_height = 2;
+static int terminal_height = 24;
 static int terminal_width = 80;
 static time_t last_since_checked_size = 0;
 
