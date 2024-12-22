@@ -75,16 +75,45 @@ uiResult interface_message_recv(const char **message)
 
 uiResult interface_message_send(const char *message)
 {
-  char *local_copy;
+  char *tmp_tok;
+  char *tmp_copy = malloc(strlen(message) + 1);
+  if (!tmp_copy) return UI_ERROR;
+  strcpy(tmp_copy, message);
 
-  if (messages[messages_count % MAX_LINES]) { free(messages[messages_count % MAX_LINES]); }
+  tmp_tok = strtok(tmp_copy, "\n");
+  if (!strchr(tmp_copy, '\n')) tmp_tok = tmp_copy;
+  while (tmp_tok) {
+    char *local_copy;
+    int i;
+
+    if (messages[messages_count % MAX_LINES]) { free(messages[messages_count % MAX_LINES]); }
+    messages_dirty = 1;
+
+    local_copy = malloc(strlen(tmp_tok) + 1);
+    if (!local_copy) goto error;
+    strcpy(local_copy, tmp_tok);
+
+    for (i = 0; local_copy[i] != '\0'; i++)
+      local_copy[i] = isprint(local_copy[i]) ? local_copy[i] : '#';
+
+    messages[messages_count++ % MAX_LINES] = local_copy;
+
+    tmp_tok = strtok(NULL, "\n");
+  }
+  free(tmp_copy);
+  return UI_SUCCESS;
+error:
+  free(tmp_copy);
+  return UI_ERROR;
+}
+
+uiResult interface_scroll_set(int scroll)
+{
+  messages_scroll = scroll;
+  messages_scroll = messages_scroll <= MAX_LINES - 1 ? messages_scroll : MAX_LINES - 1;
+  messages_scroll = messages_scroll <= messages_count - 2 ? messages_scroll : messages_count - 2;
+  messages_scroll = messages_scroll >= 0 ? messages_scroll : 0;
   messages_dirty = 1;
-
-  local_copy = malloc(strlen(message) + 1);
-  if (!local_copy) return UI_ERROR;
-  strcpy(local_copy, message);
-
-  messages[messages_count++ % MAX_LINES] = local_copy;
 
   return UI_SUCCESS;
 }
@@ -120,7 +149,8 @@ uiResult interface_tick()
   return UI_SUCCESS;
 }
 
-static uiResult bounds_tick() {
+static uiResult bounds_tick()
+{
   time_t current_time = time(NULL);
   if (current_time - last_since_checked_size < 1) return UI_SUCCESS;
   last_since_checked_size = current_time;
@@ -132,12 +162,12 @@ static uiResult bounds_tick() {
 
 static uiResult input_tick()
 {
-  char readbuf[16];
+  char readbuf[32];
   size_t nread;
   size_t i;
   txpResult status;
 
-  if ((status = txp_recv(readbuf, &nread, 16)) != TXP_SUCCESS) {
+  if ((status = txp_recv(readbuf, &nread, sizeof(readbuf) / sizeof(*readbuf))) != TXP_SUCCESS) {
     switch (status) {
       case TXP_TRY_AGAIN: return UI_SUCCESS;
       case TXP_ERROR:
@@ -149,6 +179,7 @@ static uiResult input_tick()
   for (i = 0; i < nread; i++) {
     switch (readbuf[i]) {
       int amount, height;
+      case '\r':
       case '\n':
         strcpy(actions, inputs);
         actions_dirty = 1;
@@ -179,29 +210,32 @@ static uiResult input_tick()
         ++i;
         if (isdigit(readbuf[i])) {
           amount = 0;
-          for(;i<nread && isdigit(readbuf[i]);i++) amount = 10 * amount + (readbuf[i] - '0');
+          for (; i < nread && isdigit(readbuf[i]); i++) amount = 10 * amount + (readbuf[i] - '0');
         }
         if (i >= nread) goto escape_code_end;
         if (readbuf[i] == ';') goto bounds_check_report;
         switch (readbuf[i]) {
           case 'A':
-            messages_scroll++;
+            messages_scroll += amount;
             messages_scroll = messages_scroll <= MAX_LINES - 1 ? messages_scroll : MAX_LINES - 1;
-            messages_scroll = messages_scroll <= messages_count - 2 ? messages_scroll : messages_count - 2;
+            messages_scroll =
+                messages_scroll <= messages_count - 2 ? messages_scroll : messages_count - 2;
+            messages_scroll = messages_scroll >= 0 ? messages_scroll : 0;
             messages_dirty = 1;
             break;
           case 'B':
-            messages_scroll--;
+            messages_scroll -= amount;
             messages_scroll = messages_scroll >= 0 ? messages_scroll : 0;
             messages_dirty = 1;
             break;
           case 'C':
-            inputs_cursor++;
-            inputs_cursor = inputs_cursor <= (int) strlen(inputs) ? inputs_cursor : (int) strlen(inputs);
+            inputs_cursor += amount;
+            inputs_cursor =
+                inputs_cursor <= (int) strlen(inputs) ? inputs_cursor : (int) strlen(inputs);
             inputs_dirty = 1;
             break;
           case 'D':
-            inputs_cursor--;
+            inputs_cursor -= amount;
             inputs_cursor = inputs_cursor >= 0 ? inputs_cursor : 0;
             inputs_dirty = 1;
             break;
@@ -211,7 +245,7 @@ static uiResult input_tick()
       bounds_check_report:
         height = amount;
         amount = 0;
-        for(++i;i<nread && isdigit(readbuf[i]);i++) amount = 10 * amount + (readbuf[i] - '0');
+        for (++i; i < nread && isdigit(readbuf[i]); i++) amount = 10 * amount + (readbuf[i] - '0');
         if (i >= nread) goto escape_code_end;
         if (readbuf[i] != 'R') goto escape_code_end;
 
@@ -244,7 +278,7 @@ static uiResult input_tick()
 
 #define R_CSI "\033["
 
-#define R_NEWSCREEN R_CSI "?1049h"
+#define R_NEWSCREEN R_CSI "?1049h" R_CSI "2J"
 #define R_OLDSCREEN R_CSI "?1049l"
 
 #define R_EL R_CSI "2K"
@@ -268,24 +302,32 @@ static uiResult render_stop()
 
 static uiResult render_tick()
 {
-  if (status_dirty) {
+  if (STATUS_DIRTY) {
     const char *title = status ? status : "";
     int title_pos = terminal_width / 2 - strlen(title) / 2;
     const char *info = status_info ? status_info : "";
     int info_pos = terminal_width - strlen(info) - 1;
 
-    title_pos = title_pos + (int) strlen(title) < terminal_width ? title_pos : terminal_width - (int) strlen(title);
+    title_pos = title_pos + (int) strlen(title) < terminal_width
+                    ? title_pos
+                    : terminal_width - (int) strlen(title);
     title_pos = title_pos >= 0 ? title_pos : 0;
 
     info_pos = info_pos >= 0 ? info_pos : 0;
 
-    sprintf(command_buffer, R_SCP R_CSI ";H" R_HL R_EL R_CSI ";%iH" "%s" R_CSI ";%iH" "%s" R_SGRR R_RCP, title_pos, title, info_pos, info);
+    sprintf(command_buffer,
+            R_SCP R_CSI ";H" R_HL R_EL R_CSI
+                        ";%iH"
+                        "%s" R_CSI
+                        ";%iH"
+                        "%s" R_SGRR R_RCP,
+            title_pos, title, info_pos, info);
 
-    if(txp_send(command_buffer) != TXP_SUCCESS) return UI_ERROR;
+    if (txp_send(command_buffer) != TXP_SUCCESS) return UI_ERROR;
     status_dirty = 0;
   }
 
-  if (messages_dirty) {
+  if (MESSAGES_DIRTY) {
     int line;
     char *command = command_buffer;
 
@@ -293,12 +335,13 @@ static uiResult render_tick()
     command += strlen(command);
 
     for (line = STATUS_LINE + 1; line < INPUT_LINE; line++) {
-      int line_offset = (INPUT_LINE) - (STATUS_LINE) - line;
+      int line_offset = (INPUT_LINE) - (STATUS_LINE) -line;
       int message_offset = messages_count - messages_scroll - line_offset - 1;
+      if (message_offset < messages_count - MAX_LINES) message_offset = -1;
       if (message_offset >= 0) {
-        sprintf(command, R_CSI "%i;1H" R_EL "%s", line, messages[message_offset % MAX_LINES]);
+        sprintf(command, R_CSI "%i;1H" R_EL "%s\n", line, messages[message_offset % MAX_LINES]);
       } else {
-        sprintf(command, R_CSI "%i;1H" R_EL, line);
+        sprintf(command, R_CSI "%i;1H" R_EL "\n", line);
       }
       command += strlen(command);
       if (command >= command_buffer + COMMAND_BUF_LENGTH) return UI_ERROR;
@@ -306,22 +349,21 @@ static uiResult render_tick()
 
     if (command >= command_buffer + COMMAND_BUF_LENGTH) return UI_ERROR;
 
-    sprintf(command, R_RCP);
+    sprintf(command, R_SGRR R_RCP);
     command += strlen(command);
     if (command >= command_buffer + COMMAND_BUF_LENGTH) return UI_ERROR;
 
-    if(txp_send(command_buffer) != TXP_SUCCESS) return UI_ERROR;
+    if (txp_send(command_buffer) != TXP_SUCCESS) return UI_ERROR;
     messages_dirty = 0;
   }
 
-  if (inputs_dirty) {
+  if (INPUTS_DIRTY) {
     sprintf(command_buffer, R_CSI "%i;1H" R_HL R_EL "%s" R_CSI "%i;%iH" R_SGRR, INPUT_LINE, inputs,
             INPUT_LINE, inputs_cursor + 1);
 
-    if(txp_send(command_buffer) != TXP_SUCCESS) return UI_ERROR;
+    if (txp_send(command_buffer) != TXP_SUCCESS) return UI_ERROR;
     inputs_dirty = 0;
   }
 
   return UI_SUCCESS;
 }
-
