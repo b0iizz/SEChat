@@ -1,15 +1,18 @@
-#include <stdio.h>
+##include <stdio.h>
 
 #include "interface.h"
+/*
 #include "socketxp.h"
-
+*/
 #include <string.h>
 
+/*
 int sockettest();
+*/
 int uitest();
 
 int main(void) { return uitest(); }
-
+/*
 int sockettest()
 {
   sxp_t socket;
@@ -37,7 +40,7 @@ int sockettest()
   printf("Goodbye!\n");
   return 0;
 }
-
+*/
 int uitest()
 {
   int loop = 1;
@@ -54,8 +57,15 @@ int uitest()
       /*Handle Commands*/
       if (strlen(message) >= 1 && message[0] == '!') {
         ++message;
-        if (!strcmp(message, "quit")) {
+        if (!strcmp(message, "quit") || !strcmp(message, "q")) {
           loop = 0;
+        } else if (!strcmp(message, "bottom") || !strcmp(message, "b")) {
+          interface_scroll_set(0);
+        } else if (!strcmp(message, "top") || !strcmp(message, "t")) {
+          interface_scroll_set(32767);
+        } else if (!strcmp(message, "help") || !strcmp(message, "h")) {
+          /*TODO: Display help message*/
+          interface_message_send("!help - !h: Display this help message\n!quit - !q: Quit the application\n");
         }
       } /*Handle regular messages*/
       else {
