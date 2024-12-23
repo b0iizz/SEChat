@@ -8,6 +8,7 @@ set(sources
   src/main.c
   src/interface.c
   src/encrypt.c
+  src/packet.c
 )
 
 if(WIN32)
