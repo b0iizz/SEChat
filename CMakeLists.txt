@@ -7,6 +7,7 @@ set(CMAKE_C_STANDARD_REQUIRED TRUE)
 set(sources
   src/main.c
   src/interface.c
+  src/encrypt.c
 )
 
 if(WIN32)
