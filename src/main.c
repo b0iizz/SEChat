@@ -59,13 +59,15 @@ int uitest()
         ++message;
         if (!strcmp(message, "quit") || !strcmp(message, "q")) {
           loop = 0;
+        } else if (!strcmp(message, "help") || !strcmp(message, "h")) {
+          /*TODO: Display help message*/
+          interface_message_send("!help - !h: Display this help message\n!quit - !q: Quit the application\n");
         } else if (!strcmp(message, "bottom") || !strcmp(message, "b")) {
           interface_scroll_set(0);
         } else if (!strcmp(message, "top") || !strcmp(message, "t")) {
           interface_scroll_set(32767);
-        } else if (!strcmp(message, "help") || !strcmp(message, "h")) {
-          /*TODO: Display help message*/
-          interface_message_send("!help - !h: Display this help message\n!quit - !q: Quit the application\n");
+        } else if (!strcmp(message, "clear") || !strcmp(message, "cl")) {
+          interface_message_clear();
         }
       } /*Handle regular messages*/
       else {

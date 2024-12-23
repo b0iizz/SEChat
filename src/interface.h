@@ -16,6 +16,7 @@ uiResult interface_tick();
 
 uiResult interface_message_recv(const char **message);
 uiResult interface_message_send(const char *message);
+uiResult interface_message_clear();
 uiResult interface_scroll_set(int scroll);
 uiResult interface_status(const char *title, const char *info);
 

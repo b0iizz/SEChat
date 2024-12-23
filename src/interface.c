@@ -123,6 +123,19 @@ error:
   return UI_ERROR;
 }
 
+uiResult interface_message_clear()
+{
+  int i;
+  for (i = 0; i < MAX_LINES && i < messages_count; i++) {
+    free(messages[i]);
+    messages[i] = NULL;
+  }
+  messages_count = 0;
+  messages_scroll = 0;
+  messages_dirty = 1;
+  return UI_SUCCESS;
+}
+
 uiResult interface_scroll_set(int scroll)
 {
   messages_scroll = scroll;
