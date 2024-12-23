@@ -60,18 +60,23 @@ int uitest()
         if (!strcmp(message, "quit") || !strcmp(message, "q")) {
           loop = 0;
         } else if (!strcmp(message, "help") || !strcmp(message, "h")) {
-          /*TODO: Display help message*/
           interface_message_send(
             "!quit    - !q:  Quit the application\n"
             "!help    - !h:  Display this help message\n"
             "!top     - !t:  Jump to top of messages\n"
             "!bottom  - !b:  Jump to bottom of messages\n"
+            "!up      - !u:  Scroll one page upwards\n"
+            "!down    - !d:  Scroll one page downwards\n"
             "!clear   - !cl: Clear all messages"
           );
         } else if (!strcmp(message, "top") || !strcmp(message, "t")) {
           interface_scroll_set(32767);
         } else if (!strcmp(message, "bottom") || !strcmp(message, "b")) {
           interface_scroll_set(0);
+        } else if (!strcmp(message, "up") || !strcmp(message, "u")) {
+          interface_scroll_relative(0, 1);
+        } else if (!strcmp(message, "down") || !strcmp(message, "d")) {
+          interface_scroll_relative(0, -1);
         } else if (!strcmp(message, "clear") || !strcmp(message, "cl")) {
           interface_message_clear();
         }

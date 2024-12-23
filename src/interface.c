@@ -147,6 +147,10 @@ uiResult interface_scroll_set(int scroll)
   return UI_SUCCESS;
 }
 
+uiResult interface_scroll_relative(int messages, int pages) {
+  return interface_scroll_set(messages_scroll + messages + pages * (INPUT_LINE - STATUS_LINE - 1));
+}
+
 uiResult interface_status(const char *title, const char *info)
 {
   char *local_copy;
