@@ -15,9 +15,21 @@ typedef int sxpResult;
 enum sxpresults{
   SXP_SUCCESS = 0,
   /*returned when operation whould block on nonblocking socket*/
-  SXP_FAILURE_BLOCKING = 1,
+  SXP_TRY_AGAIN = 1,
+  /*returned when packet size is too large*/
+  SXP_TOO_BIG = 2,
+  /*returned when operation will complete asynchronously*/
+  SXP_ASYNC = 3,
   /*returned when a platform-specific error occurred*/
   SXP_ERROR_PLATFORM = -1,
+  /*returned when out of memory*/
+  SXP_ERROR_MEMORY = -2,
+  /*returned when one or multiple arguments are invalid*/
+  SXP_ERROR_INVAL = -3,
+  /*returned when a io or connection error occured*/
+  SXP_ERROR_IO = -4,
+  /*returned when the socket is/has been closed */
+  SXP_ERROR_CLOSED = -5,
   /*returned when the reason for failure is not known*/
   SXP_ERROR_UNKNOWN = -128
 };
