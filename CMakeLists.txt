@@ -4,6 +4,12 @@ project(SEChat)
 set(CMAKE_C_STANDARD 90)
 set(CMAKE_C_STANDARD_REQUIRED TRUE)
 
+option(tidy "Use clang-tidy to improve code style in the project" OFF)
+
+if(tidy)
+  set (CMAKE_C_CLANG_TIDY clang-tidy --config-file=./.clang-tidy )
+endif()
+
 set(sources
   src/main.c
   src/interface.c
