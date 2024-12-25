@@ -20,7 +20,8 @@ txpResult txp_state_set(term_state_t *save) {
 }
 
 txpResult txp_start() {
-  term_state_t to_modify, read;
+  term_state_t to_modify;
+  term_state_t read;
   txpResult result;
   if ((result = txp_state_get(&read)) != TXP_SUCCESS) return result;
   terminal_reset_state = read;

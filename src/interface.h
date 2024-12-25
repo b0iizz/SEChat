@@ -1,11 +1,7 @@
 #ifndef INTERFACE_H_
 #define INTERFACE_H_
 
-enum uiresults {
-  UI_SUCCESS = 0,
-  UI_TRY_AGAIN = 1,
-  UI_ERROR = -1
-};
+enum uiresults { UI_SUCCESS = 0, UI_TRY_AGAIN = 1, UI_ERROR = -1 };
 
 typedef int uiResult;
 

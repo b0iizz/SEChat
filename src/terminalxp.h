@@ -9,8 +9,8 @@
 #include <conio.h>
 
 typedef struct {
-  DWORD input_mode;
-  DWORD output_mode;
+    DWORD input_mode;
+    DWORD output_mode;
 } term_state_t;
 
 #else
@@ -28,11 +28,7 @@ typedef struct termios term_state_t;
 
 typedef int txpResult;
 
-enum txpresults {
-  TXP_SUCCESS = 0,
-  TXP_TRY_AGAIN = 1,
-  TXP_ERROR = -1
-};
+enum txpresults { TXP_SUCCESS = 0, TXP_TRY_AGAIN = 1, TXP_ERROR = -1 };
 
 txpResult txp_init();
 txpResult txp_exit();

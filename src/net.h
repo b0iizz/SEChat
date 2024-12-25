@@ -8,20 +8,17 @@
 typedef int netResult;
 typedef int connection_t;
 
-enum netresults {
-  NET_SUCCESS = 0,
-  NET_TRY_AGAIN = 1,
-  NET_ERROR = -1
-};
+enum netresults { NET_SUCCESS = 0, NET_TRY_AGAIN = 1, NET_ERROR = -1 };
 
 typedef struct persona_t {
-  short int identifier;
-  const char *name;
-  short int encryptor_id;
-  void *key;
+    short int identifier;
+    const char *name;
+    short int encryptor_id;
+    void *key;
 }
 
-netResult net_init();
+netResult
+net_init();
 netResult net_exit();
 
 netResult net_myself_rename(const char *name);
