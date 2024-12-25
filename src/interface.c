@@ -50,13 +50,19 @@ static int status_dirty = 1;
 
 
 static uiResult bounds_tick();
+
+static size_t input_consume_csi(char *buf, size_t len);
+static uiResult input_handle_csi(char *buf, size_t csilen);
 static uiResult input_tick();
 
 static char command_buffer[COMMAND_BUF_LENGTH];
 
 static uiResult render_start();
 static uiResult render_stop();
-static uiResult render_tick();
+
+static uiResult render_status();
+static uiResult render_messages();
+static uiResult render_input();
 
 uiResult interface_init()
 {
@@ -147,8 +153,20 @@ uiResult interface_scroll_set(int scroll)
   return UI_SUCCESS;
 }
 
-uiResult interface_scroll_relative(int messages, int pages) {
-  return interface_scroll_set(messages_scroll + messages + pages * (INPUT_LINE - STATUS_LINE - 1));
+uiResult interface_scroll_relative(int messages, int pages)
+{
+    return interface_scroll_set(messages_scroll + messages +
+                                pages * (INPUT_LINE - STATUS_LINE - 1));
+}
+
+uiResult interface_cursor_set(int cursor)
+{
+    inputs_cursor = cursor;
+    inputs_cursor = inputs_cursor <= (int)strlen(inputs) ? inputs_cursor :
+                                                           (int)strlen(inputs);
+    inputs_cursor = inputs_cursor >= 0 ? inputs_cursor : 0;
+    inputs_dirty = 1;
+    return UI_SUCCESS;
 }
 
 uiResult interface_status(const char *title, const char *info)
@@ -176,10 +194,17 @@ uiResult interface_status(const char *title, const char *info)
 
 uiResult interface_tick()
 {
-  if (input_tick() != UI_SUCCESS) return UI_ERROR;
-  if (render_tick() != UI_SUCCESS) return UI_ERROR;
-  if (bounds_tick() != UI_SUCCESS) return UI_ERROR;
-  return UI_SUCCESS;
+    if (input_tick() != UI_SUCCESS)
+        return UI_ERROR;
+    if (STATUS_DIRTY && (render_status() != UI_SUCCESS))
+        return UI_ERROR;
+    if (MESSAGES_DIRTY && (render_messages() != UI_SUCCESS))
+        return UI_ERROR;
+    if (INPUTS_DIRTY && (render_input() != UI_SUCCESS))
+        return UI_ERROR;
+    if (bounds_tick() != UI_SUCCESS)
+        return UI_ERROR;
+    return UI_SUCCESS;
 }
 
 static uiResult bounds_tick()
@@ -193,120 +218,162 @@ static uiResult bounds_tick()
   return UI_SUCCESS;
 }
 
-static uiResult input_tick()
+static size_t input_consume_csi(char *buf, size_t len)
 {
-  char readbuf[32];
-  size_t nread;
-  size_t i;
-  txpResult status;
+    size_t result = 1;
+    if (len <= 1 || buf[0] != '[')
+        return result;
+    for (; result < len; result++)
+        if (!strchr("0123456789:;<=>?", buf[result]))
+            break;
+    for (; result < len; result++)
+        if (!strchr("!\"#$%&\'()*+,-./", buf[result])) {
+            break;
+        }
+    if (result >= len || !(buf[result] >= '@' && buf[result] <= '~'))
+        return 1;
+    return result + 1;
+}
 
-  if ((status = txp_recv(readbuf, &nread, sizeof(readbuf) / sizeof(*readbuf))) != TXP_SUCCESS) {
-    switch (status) {
-      case TXP_TRY_AGAIN: return UI_SUCCESS;
-      case TXP_ERROR:
-      default: return UI_ERROR;
-    }
-  }
-
-
-  for (i = 0; i < nread; i++) {
-    switch (readbuf[i]) {
-      int amount, height;
-      case '\r':
-      case '\n':
-        strcpy(actions, inputs);
-        actions_dirty = 1;
-
-        inputs[0] = '\0';
-        inputs_cursor = 0;
-        inputs_dirty = 1;
-
-        i = nread;
+static uiResult input_handle_csi(char *buf, size_t csilen)
+{
+    int scanidx = 0;
+    int read = 0;
+    unsigned int amount;
+    unsigned int x;
+    unsigned int y;
+    char command = buf[csilen - 1];
+    /*char test[128] = {0};
+  sprintf(test, "%.*s : %li\n", csilen, buf, csilen);
+  interface_message_send(test);*/
+    switch (command) {
+    case 'A':
+        if (csilen == 1) {
+            amount = 1;
+        } else if (sscanf(buf, "%uA", &amount) != 1)
+            goto csi_end;
+        interface_scroll_set(messages_scroll + amount);
         break;
-      case 127:
-      case '\b':
-        if (inputs_cursor > 0) {
-          memmove(inputs + inputs_cursor - 1, inputs + inputs_cursor,
-                  strlen(inputs + inputs_cursor) + 1);
-          inputs_cursor--;
-
-          inputs_dirty = 1;
-        }
-
-        i = nread;
+    case 'B':
+        if (csilen == 1) {
+            amount = 1;
+        } else if (sscanf(buf, "%uB", &amount) != 1)
+            goto csi_end;
+        interface_scroll_set(messages_scroll - amount);
         break;
-      case '\033':
-        /*Handle escape codes*/
-        amount = 1;
-        if (nread < 3) goto escape_code_end;
-        if (readbuf[++i] != '[') goto escape_code_end;
-        ++i;
-        if (isdigit(readbuf[i])) {
-          amount = 0;
-          for (; i < nread && isdigit(readbuf[i]); i++) amount = 10 * amount + (readbuf[i] - '0');
+    case 'C':
+        if (csilen == 1) {
+            amount = 1;
+        } else if (sscanf(buf, "%uC", &amount) != 1)
+            goto csi_end;
+        interface_cursor_set(inputs_cursor + amount);
+        break;
+    case 'D':
+        if (csilen == 1) {
+            amount = 1;
+        } else if (sscanf(buf, "%uD", &amount) != 1)
+            goto csi_end;
+        interface_cursor_set(inputs_cursor - amount);
+        break;
+    case 'R':
+        if (sscanf(buf + scanidx, "%u%n", &y, &read) == 1) {
+            scanidx += read;
+        } else {
+            y = 1;
         }
-        if (i >= nread) goto escape_code_end;
-        if (readbuf[i] == ';') goto bounds_check_report;
-        switch (readbuf[i]) {
-          case 'A':
-            messages_scroll += amount;
-            messages_scroll = messages_scroll <= MAX_LINES - 1 ? messages_scroll : MAX_LINES - 1;
-            messages_scroll =
-                messages_scroll <= messages_count - 2 ? messages_scroll : messages_count - 2;
-            messages_scroll = messages_scroll >= 0 ? messages_scroll : 0;
-            messages_dirty = 1;
-            break;
-          case 'B':
-            messages_scroll -= amount;
-            messages_scroll = messages_scroll >= 0 ? messages_scroll : 0;
-            messages_dirty = 1;
-            break;
-          case 'C':
-            inputs_cursor += amount;
-            inputs_cursor =
-                inputs_cursor <= (int) strlen(inputs) ? inputs_cursor : (int) strlen(inputs);
-            inputs_dirty = 1;
-            break;
-          case 'D':
-            inputs_cursor -= amount;
-            inputs_cursor = inputs_cursor >= 0 ? inputs_cursor : 0;
-            inputs_dirty = 1;
-            break;
-          default: break;
+        if (buf[scanidx++] != ';')
+            goto csi_end;
+        if (sscanf(buf + scanidx, "%u%n", &x, &read) == 1) {
+            scanidx += read;
+        } else {
+            x = 1;
         }
-        goto escape_code_end;
-      bounds_check_report:
-        height = amount;
-        amount = 0;
-        for (++i; i < nread && isdigit(readbuf[i]); i++) amount = 10 * amount + (readbuf[i] - '0');
-        if (i >= nread) goto escape_code_end;
-        if (readbuf[i] != 'R') goto escape_code_end;
-
-        terminal_width = amount;
-        terminal_height = height;
+        if (buf[scanidx++] != 'R')
+            goto csi_end;
+        terminal_width = x;
+        terminal_height = y;
 
         status_dirty = 1;
         messages_dirty = 1;
-      escape_code_end:
         inputs_dirty = 1;
-
-        i = nread;
         break;
-      default:
-        if (isprint(readbuf[i]) && inputs_cursor < INPUT_LENGTH - 1) {
-          size_t to_copy = strlen(inputs + inputs_cursor) + 1;
-          size_t available = INPUT_LENGTH - inputs_cursor - 1;
-          to_copy = to_copy < available ? to_copy : available;
-
-          memmove(inputs + inputs_cursor + 1, inputs + inputs_cursor, to_copy);
-
-          inputs[inputs_cursor++] = readbuf[i];
-          inputs_dirty = 1;
-        }
+    default:
         break;
     }
-  }
-  return UI_SUCCESS;
+csi_end:
+    return UI_SUCCESS;
+}
+
+static uiResult input_tick()
+{
+    char readbuf[32];
+    size_t nread;
+    size_t i;
+    size_t j;
+    txpResult status;
+
+    if ((status =
+             txp_recv(readbuf, &nread, sizeof(readbuf) / sizeof(*readbuf))) !=
+        TXP_SUCCESS) {
+        switch (status) {
+        case TXP_TRY_AGAIN:
+            return UI_SUCCESS;
+        case TXP_ERROR:
+        default:
+            return UI_ERROR;
+        }
+    }
+    for (i = 0; i < nread;) {
+        switch (readbuf[i]) {
+        case '\r':
+        case '\n':
+            memcpy(actions, inputs, strlen(inputs) + 1);
+            actions_dirty = 1;
+
+            inputs[0] = '\0';
+            inputs_cursor = 0;
+            inputs_dirty = 1;
+
+            i++;
+            break;
+        case 127:
+        case '\b':
+            if (inputs_cursor > 0) {
+                memmove(inputs + inputs_cursor - 1, inputs + inputs_cursor,
+                        strlen(inputs + inputs_cursor) + 1);
+                inputs_cursor--;
+
+                inputs_dirty = 1;
+            }
+
+            i++;
+            break;
+        case '\033':
+            j = input_consume_csi(readbuf + i + 1, nread - (i + 1));
+            if (j <= 1 ||
+                input_handle_csi(readbuf + i + 2, j - 1) != UI_SUCCESS) {
+                i++;
+                break;
+            }
+            i += j + 1;
+            break;
+        default:
+            if (isprint(readbuf[i]) && inputs_cursor < INPUT_LENGTH - 1) {
+                size_t to_copy = strlen(inputs + inputs_cursor) + 1;
+                size_t available = INPUT_LENGTH - inputs_cursor - 1;
+                to_copy = to_copy < available ? to_copy : available;
+
+                memmove(inputs + inputs_cursor + 1, inputs + inputs_cursor,
+                        to_copy);
+
+                inputs[inputs_cursor++] = readbuf[i];
+                inputs_dirty = 1;
+            }
+            i++;
+            break;
+        }
+    }
+    return UI_SUCCESS;
 }
 
 #define R_CSI "\033["
@@ -333,9 +400,8 @@ static uiResult render_stop()
   return UI_SUCCESS;
 }
 
-static uiResult render_tick()
+static uiResult render_status()
 {
-  if (STATUS_DIRTY) {
     const char *title = status ? status : "";
     int title_pos = terminal_width / 2 - strlen(title) / 2;
     const char *info = status_info ? status_info : "";
@@ -358,9 +424,11 @@ static uiResult render_tick()
 
     if (txp_send(command_buffer) != TXP_SUCCESS) return UI_ERROR;
     status_dirty = 0;
-  }
+    return UI_SUCCESS;
+}
 
-  if (MESSAGES_DIRTY) {
+static uiResult render_messages()
+{
     int line;
     char *command = command_buffer;
 
@@ -388,11 +456,13 @@ static uiResult render_tick()
 
     if (txp_send(command_buffer) != TXP_SUCCESS) return UI_ERROR;
     messages_dirty = 0;
-  }
+    return UI_SUCCESS;
+}
 
-  if (INPUTS_DIRTY) {
-    sprintf(command_buffer, R_CSI "%i;1H" R_HL R_EL "%s" R_CSI "%i;%iH" R_SGRR, INPUT_LINE, inputs,
-            INPUT_LINE, inputs_cursor + 1);
+static uiResult render_input()
+{
+    sprintf(command_buffer, R_CSI "%i;1H" R_HL R_EL "%s" R_CSI "%i;%iH" R_SGRR,
+            INPUT_LINE, inputs, INPUT_LINE, inputs_cursor + 1);
 
     if (txp_send(command_buffer) != TXP_SUCCESS) return UI_ERROR;
     inputs_dirty = 0;
