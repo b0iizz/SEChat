@@ -20,11 +20,8 @@ static char *messages[MAX_LINES] = { 0 };
 static int messages_count = 0;
 static int messages_scroll = 0;
 static int messages_dirty = 1;
-#if defined(WIN32) || defined(_WIN32) || defined(_WIN64)
-#define MESSAGES_DIRTY 1
-#else
+
 #define MESSAGES_DIRTY messages_dirty
-#endif
 
 static char inputs[INPUT_LENGTH] = { 0 };
 static int inputs_cursor = 0;
@@ -417,6 +414,11 @@ static uiResult input_tick()
 #define R_HL R_CSI "47m" R_CSI "30m"
 #define R_SGRR R_CSI "0m"
 
+#if defined(WIN32) || defined(_WIN32) || defined(_WIN64)
+#define R_BRK "\r\n"
+#else
+#define R_BRK ""
+#endif
 static uiResult render_start()
 {
     if (txp_send(R_NEWSCREEN) != TXP_SUCCESS)
@@ -447,8 +449,8 @@ static uiResult render_status()
 
     sprintf(command_buffer,
             R_SCP R_CSI ";H" R_HL R_EL R_CSI ";%iH"
-                        "%s" R_CSI ";%iH"
-                        "%s" R_SGRR R_RCP,
+                        "%s" R_BRK R_CSI ";%iH"
+                        "%s" R_BRK R_SGRR  R_RCP,
             title_pos, title, info_pos, info);
 
     if (txp_send(command_buffer) != TXP_SUCCESS)
@@ -471,10 +473,10 @@ static uiResult render_messages()
         if (message_offset < messages_count - MAX_LINES)
             message_offset = -1;
         if (message_offset >= 0) {
-            sprintf(command, R_CSI "%i;1H" R_EL "%s\n", line,
+            sprintf(command, R_CSI "%i;1H" R_EL "%s" R_BRK, line,
                     messages[message_offset % MAX_LINES]);
         } else {
-            sprintf(command, R_CSI "%i;1H" R_EL "\n", line);
+            sprintf(command, R_CSI "%i;1H" R_EL R_BRK, line);
         }
         command += strlen(command);
         if (command >= command_buffer + COMMAND_BUF_LENGTH)
