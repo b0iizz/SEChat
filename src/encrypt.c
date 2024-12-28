@@ -1,6 +1,7 @@
 #include "encrypt.h"
+#include <ctype.h>
 
-encryptor_t encryptors[ENCRYPT_MAX_VAL] = { 0, ENCRYPT_CAESAR};
+encryptor_t encryptors[ENCRYPT_MAX_VAL] = { 0 };
 
 static void *encrypt_none_key_parse(const char *key);
 static void encrypt_none_key_free(void *key);
@@ -72,6 +73,7 @@ static void *encrypt_caesar_key_parse(const char *key)
     int i = 0;
     int *keyptr = malloc(sizeof(int));
     *keyptr = atoi(key);
+    *keyptr %= 26;
     if(*keyptr == 0){
         while(key[i] != '\0' && isspace(key[i]))
             i++;
@@ -79,7 +81,7 @@ static void *encrypt_caesar_key_parse(const char *key)
             return NULL;
     }
 
-    return &keyptr;
+    return keyptr;
 }
 static void encrypt_caesar_key_free(void *key)
 {
@@ -95,42 +97,37 @@ static void encrypt_caesar_state_free(void *state)
 }
 static void encrypt_caesar_encode(char *str, void *key, void *state)
 {
-    int i;
+    int i, let, upper;
     int letshift = *((int *)key);
     for (i = 0; str[i] != '\0'; i++)
     {
-        if (!isletter(str[i]))
+        if (!isalpha(str[i]))
             continue;
 
-        if (isupper(str[i])) {
-            str[i] += letshift;
-            if(str[i]>'Z')
-                str[i] -= 26;
-        } else {
-            str[i] += letshift;
-            if(str[i]>'z')
-                str[i] -= 26;
-        }
+        upper = isupper(str[i]);
+        let = upper ? (str[i] - 'A') : (str[i] - 'a');
+        let += letshift;
+        let %= 26;
+        str[i] = upper ? (let + 'A') : (let + 'a');
     }
-
+    (void)state;
 }
 static void encrypt_caesar_decode(char *code, void *key, void *state)
 {
-    int i;
+    int i, let, upper;
     int letshift = *((int *)key);
     for (i = 0; code[i] != '\0'; i++)
     {
-        if (!isletter(code[i]))
+        if (!isalpha(code[i]))
             continue;
 
-        if (isupper(code[i])) {
-            code[i] -= letshift;
-            if(code[i] < 'A')
-                code[i] += 26;
-        } else {
-            code[i] -= letshift;
-            if(code[i] < 'a')
-                code[i] += 26;
-        }
+        upper = isupper(code[i]);
+        let = upper ? (code[i] - 'A') : (code[i] - 'a');
+        let -= letshift;
+        let += 26;
+        let %= 26;
+
+        code[i] = upper ? (let + 'A') : (let + 'a');
     }
+    (void)state;
 }
