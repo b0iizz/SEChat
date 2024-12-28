@@ -6,7 +6,7 @@ static sxpResult sxp_map_eai_error(int error, int system_errno);
 static sxpResult sxp_map_error(int error);
 
 sxpResult sxp_init() { return SXP_SUCCESS; }
-void sxp_cleanup() {}
+sxpResult sxp_cleanup() { return SXP_SUCCESS; }
 
 sxpResult sxp_create(sxp_t *dst, int family, int type, int protocol, int nonblock)
 {

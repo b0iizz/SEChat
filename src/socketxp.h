@@ -52,7 +52,7 @@ enum sxpresults {
 enum sxpconfigs { SXP_BLOCKING = 0, SXP_NONBLOCKING = 1 };
 
 sxpResult sxp_init();
-void sxp_cleanup();
+sxpResult sxp_cleanup();
 
 sxpResult sxp_create(sxp_t *dst, int family, int type, int protocol,
                      int nonblock);
