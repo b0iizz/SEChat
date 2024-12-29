@@ -28,8 +28,8 @@ void encrypt_init()
 
     encryptors[ENCRYPT_CAESAR].key_parse = &encrypt_caesar_key_parse;
     encryptors[ENCRYPT_CAESAR].key_free = &encrypt_caesar_key_free;
-    encryptors[ENCRYPT_CAESAR].state_alloc = &encrypt_caesar_state_alloc;
-    encryptors[ENCRYPT_CAESAR].state_free = &encrypt_caesar_state_free;
+    encryptors[ENCRYPT_CAESAR].state_alloc = &encrypt_none_state_alloc;
+    encryptors[ENCRYPT_CAESAR].state_free = &encrypt_none_state_free;
     encryptors[ENCRYPT_CAESAR].encode = &encrypt_caesar_encode;
     encryptors[ENCRYPT_CAESAR].decode = &encrypt_caesar_decode;
 }
@@ -87,14 +87,7 @@ static void encrypt_caesar_key_free(void *key)
 {
     free((int *)key);
 }
-static void *encrypt_caesar_state_alloc()
-{
-    return &encryptors; /*Non NULL address*/
-}
-static void encrypt_caesar_state_free(void *state)
-{
-    (void)state;
-}
+
 static void encrypt_caesar_encode(char *str, void *key, void *state)
 {
     int i, let, upper;
