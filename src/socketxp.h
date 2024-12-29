@@ -6,6 +6,14 @@
 /*sxp_t, pollsxp_t, addrinfo_t, sockaddr_t*/
 #if defined(WIN32) || defined(_WIN32) || defined(_WIN64)
 
+#include <winsock2.h>
+#include <ws2tcpip.h>
+
+typedef SOCKET sxp_t;
+typedef WSAPOLLFD pollsxp_t;
+typedef struct addrinfo addrinfo_t;
+typedef struct sockaddr sockaddr_t;
+
 #else
 
 #ifndef _POSIX_C_SOURCE

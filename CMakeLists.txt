@@ -6,7 +6,8 @@ set(CMAKE_C_STANDARD_REQUIRED TRUE)
 
 option(tidy "Use clang-tidy to improve code style in the project" OFF)
 
-if(tidy)
+if(tidy AND UNIX)
+  set (CMAKE_C_USE_RESPONSE_FILE_FOR_INCLUDES Off)
   set (CMAKE_C_CLANG_TIDY clang-tidy --config-file=./.clang-tidy )
 endif()
 
@@ -20,6 +21,7 @@ set(sources
 if(WIN32)
   set(platform_sources
     src/windows/terminal.c
+    src/windows/socket.c
   )
 elseif(UNIX)
   set(platform_sources

@@ -42,7 +42,11 @@ sxpResult sxp_addrinfo_get(addrinfo_t **results, const char *maybe_hostname,
   return SXP_SUCCESS;
 }
 
-sxpResult sxp_addrinfo_free(addrinfo_t *info) { freeaddrinfo(info); return SXP_SUCCESS; }
+sxpResult sxp_addrinfo_free(addrinfo_t *info)
+{
+  freeaddrinfo(info);
+  return SXP_SUCCESS;
+}
 
 /*server-side API*/
 sxpResult sxp_bind(sxp_t *sock, const sockaddr_t *address, size_t addrlen)
@@ -155,7 +159,7 @@ static sxpResult sxp_map_error(int error)
     case ENETDOWN:
     case EIO: return SXP_ERROR_IO;
     case EINPROGRESS: return SXP_ASYNC;
-    case ETIMEDOUT: return SXP_TRY_AGAIN;
+    case ETIMEDOUT:
     case EPIPE: return SXP_ERROR_CLOSED;
     default: return SXP_ERROR_UNKNOWN;
   }
