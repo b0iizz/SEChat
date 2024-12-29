@@ -25,13 +25,11 @@ sxpResult sxp_cleanup()
   return SXP_SUCCESS;
 }
 
-sxpResult sxp_create(sxp_t *dst, int family, int type, int protocol, int nonblock)
+sxpResult sxp_create(sxp_t *dst, int family, int type, int protocol)
 {
-  unsigned long int mode = nonblock == SXP_NONBLOCKING ? 0 : 1;
   if (!dst) return SXP_ERROR_INVAL;
   *dst = socket(family, type, protocol);
   if (*dst == INVALID_SOCKET) return sxp_map_error(WSAGetLastError());
-  if (mode && ioctlsocket(*dst, FIONBIO, &mode)) return sxp_map_error(WSAGetLastError());
   return SXP_SUCCESS;
 }
 
@@ -39,6 +37,13 @@ sxpResult sxp_destroy(sxp_t *sock)
 {
   if (!sock) return SXP_ERROR_INVAL;
   if (closesocket(*sock)) return sxp_map_error(WSAGetLastError());
+  return SXP_SUCCESS;
+}
+
+sxpResult sxp_nbio_set(sxp_t *sock, int nonblockingio) {
+  unsigned long int mode = (nonblockingio == SXP_NONBLOCKING) ? 1 : 0;
+  if (!sock) return SXP_ERROR_INVAL;
+  if (ioctlsocket(*sock, FIONBIO, &mode)) return sxp_map_error(WSAGetLastError());
   return SXP_SUCCESS;
 }
 

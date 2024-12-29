@@ -8,21 +8,11 @@ static sxpResult sxp_map_error(int error);
 sxpResult sxp_init() { return SXP_SUCCESS; }
 sxpResult sxp_cleanup() { return SXP_SUCCESS; }
 
-sxpResult sxp_create(sxp_t *dst, int family, int type, int protocol, int nonblock)
+sxpResult sxp_create(sxp_t *dst, int family, int type, int protocol)
 {
   int sock;
   if (!dst) return SXP_ERROR_INVAL;
   if ((sock = socket(family, type, protocol)) < 0) { return sxp_map_error(errno); }
-  if (nonblock == SXP_NONBLOCKING) {
-    if (fcntl(sock, F_SETFL, O_NONBLOCK) < 0) {
-      close(sock);
-      return SXP_ERROR_UNKNOWN;
-    }
-  } else if (nonblock != SXP_BLOCKING) {
-    close(sock);
-    return SXP_ERROR_INVAL;
-  }
-
   *dst = sock;
   return SXP_SUCCESS;
 }
@@ -34,6 +24,16 @@ sxpResult sxp_destroy(sxp_t *sock)
   return SXP_SUCCESS;
 }
 
+sxpResult sxp_nbio_set(sxp_t *sock, int nonblockingio) {
+  long int enabler = nonblockingio == SXP_NONBLOCKING ? O_NONBLOCK : 0;
+  long int disabler = nonblockingio == SXP_BLOCKING ? ~O_NONBLOCK : ~0;
+  long int flags = fcntl(*sock, F_GETFL, 0);
+  if (!sock) return SXP_ERROR_INVAL;
+  if (flags < 0 || fcntl(*sock, F_SETFL, enabler | (disabler & flags)) < 0) {
+      return SXP_ERROR_UNKNOWN;
+  }
+  return SXP_SUCCESS;
+}
 sxpResult sxp_addrinfo_get(addrinfo_t **results, const char *maybe_hostname,
                            const char *serviceport, addrinfo_t *hints)
 {

@@ -62,9 +62,10 @@ enum sxpconfigs { SXP_BLOCKING = 0, SXP_NONBLOCKING = 1 };
 sxpResult sxp_init();
 sxpResult sxp_cleanup();
 
-sxpResult sxp_create(sxp_t *dst, int family, int type, int protocol,
-                     int nonblock);
+sxpResult sxp_create(sxp_t *dst, int family, int type, int protocol);
 sxpResult sxp_destroy(sxp_t *sock);
+
+sxpResult sxp_nbio_set(sxp_t *sock, int nonblockingio);
 
 sxpResult sxp_addrinfo_get(addrinfo_t **results, const char *maybe_hostname,
                            const char *serviceport, addrinfo_t *hints);
