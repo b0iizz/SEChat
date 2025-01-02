@@ -1,5 +1,6 @@
 #include "encrypt.h"
 #include <ctype.h>
+#include <stdlib.h>
 
 encryptor_t encryptors[ENCRYPT_MAX_VAL] = { 0 };
 
@@ -12,10 +13,13 @@ static void encrypt_none_decode(char *code, void *key, void *state);
 
 static void *encrypt_caesar_key_parse(const char *key);
 static void encrypt_caesar_key_free(void *key);
-static void *encrypt_caesar_state_alloc();
-static void encrypt_caesar_state_free(void *state);
 static void encrypt_caesar_encode(char *str, void *key, void *state);
 static void encrypt_caesar_decode(char *code, void *key, void *state);
+
+static void *encrypt_vigenere_key_parse(const char *key);
+static void encrypt_vigenere_key_free(void *key);
+static void encrypt_vigenere_encode(char *str, void *key, void *state);
+static void encrypt_vigenere_decode(char *code, void *key, void *state);
 
 void encrypt_init()
 {
@@ -32,6 +36,13 @@ void encrypt_init()
     encryptors[ENCRYPT_CAESAR].state_free = &encrypt_none_state_free;
     encryptors[ENCRYPT_CAESAR].encode = &encrypt_caesar_encode;
     encryptors[ENCRYPT_CAESAR].decode = &encrypt_caesar_decode;
+
+    encryptors[ENCRYPT_VIGENERE].decode = &encrypt_vigenere_decode;
+    encryptors[ENCRYPT_VIGENERE].key_parse = &encrypt_vigenere_key_parse;
+    encryptors[ENCRYPT_VIGENERE].key_free = &encrypt_vigenere_key_free;
+    encryptors[ENCRYPT_VIGENERE].state_alloc = &encrypt_none_state_alloc;
+    encryptors[ENCRYPT_VIGENERE].state_free = &encrypt_none_state_free;
+    encryptors[ENCRYPT_VIGENERE].encode = &encrypt_vigenere_encode;
 }
 
 /*Do not encrypt data*/
@@ -121,6 +132,79 @@ static void encrypt_caesar_decode(char *code, void *key, void *state)
         let %= 26;
 
         code[i] = upper ? (let + 'A') : (let + 'a');
+    }
+    (void)state;
+}
+
+
+/*Vigenere-Cipher*/
+
+static void *encrypt_vigenere_key_parse(const char *key)
+{
+    int i, str_size = 0;
+    int *keyptr;
+
+    for (i = 0; key[i] != '\0'; i++)
+    {
+        if(!isalpha(key[i]))
+            return NULL;
+        str_size++;
+    }
+
+    keyptr = malloc((1 + str_size) * sizeof(int));
+    keyptr[0] = str_size;
+
+    for (i = 0; i < str_size; i++)
+        keyptr[1 + i] = tolower(key[i]) - 'a';
+
+    return keyptr;
+}
+static void encrypt_vigenere_key_free(void *key)
+{
+    free((int *)key);
+}
+static void encrypt_vigenere_encode(char *str, void *key, void *state)
+{
+    int i, let, upper;
+    int letshift, letshift_cnt = 0;
+    for (i = 0; str[i] != '\0'; i++)
+    {
+        if (!isalpha(str[i]))
+            continue;
+
+        letshift = ((int *)key)[1 + letshift_cnt];
+
+        upper = isupper(str[i]);
+        let = tolower(str[i]) - 'a';
+        let += letshift;
+        let %= 26;
+        str[i] = upper ? (let + 'A') : (let + 'a');
+
+        letshift_cnt++;
+        letshift_cnt %= *((int *)key);
+    }
+    (void)state;
+}
+static void encrypt_vigenere_decode(char *code, void *key, void *state)
+{
+    int i, let, upper;
+    int letshift, letshift_cnt = 0;
+    for (i = 0; code[i] != '\0'; i++)
+    {
+        if (!isalpha(code[i]))
+            continue;
+
+        letshift = ((int *)key)[1 + letshift_cnt];
+
+        upper = isupper(code[i]);
+        let = upper ? (code[i] - 'A') : (code[i] - 'a');
+        let -= letshift;
+        let += 26;
+        let %= 26;
+        code[i] = upper ? (let + 'A') : (let + 'a');
+
+        letshift_cnt++;
+        letshift_cnt %= *((int *)key);
     }
     (void)state;
 }
