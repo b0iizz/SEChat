@@ -8,18 +8,19 @@ static void *encrypt_none_key_parse(const char *key);
 static void encrypt_none_key_free(void *key);
 static void *encrypt_none_state_alloc();
 static void encrypt_none_state_free(void *state);
-static void encrypt_none_encode(char *str, void *key, void *state);
-static void encrypt_none_decode(char *code, void *key, void *state);
+static void encrypt_none_encode(char **str, void *key, void *state);
+static void encrypt_none_decode(char **code, void *key, void *state);
 
 static void *encrypt_caesar_key_parse(const char *key);
 static void encrypt_caesar_key_free(void *key);
-static void encrypt_caesar_encode(char *str, void *key, void *state);
-static void encrypt_caesar_decode(char *code, void *key, void *state);
+
+static void encrypt_caesar_encode(char **str, void *key, void *state);
+static void encrypt_caesar_decode(char **code, void *key, void *state);
 
 static void *encrypt_vigenere_key_parse(const char *key);
 static void encrypt_vigenere_key_free(void *key);
-static void encrypt_vigenere_encode(char *str, void *key, void *state);
-static void encrypt_vigenere_decode(char *code, void *key, void *state);
+static void encrypt_vigenere_encode(char **str, void *key, void *state);
+static void encrypt_vigenere_decode(char **code, void *key, void *state);
 
 void encrypt_init()
 {
@@ -64,13 +65,13 @@ static void encrypt_none_state_free(void *state)
 {
     (void)state;
 }
-static void encrypt_none_encode(char *str, void *key, void *state)
+static void encrypt_none_encode(char **str, void *key, void *state)
 {
     (void)str;
     (void)key;
     (void)state;
 }
-static void encrypt_none_decode(char *code, void *key, void *state)
+static void encrypt_none_decode(char **code, void *key, void *state)
 {
     (void)code;
     (void)key;
@@ -99,10 +100,11 @@ static void encrypt_caesar_key_free(void *key)
     free((int *)key);
 }
 
-static void encrypt_caesar_encode(char *str, void *key, void *state)
+static void encrypt_caesar_encode(char **text, void *key, void *state)
 {
     int i, let, upper;
     int letshift = *((int *)key);
+    char *str = *text;
     for (i = 0; str[i] != '\0'; i++)
     {
         if (!isalpha(str[i]))
@@ -116,10 +118,11 @@ static void encrypt_caesar_encode(char *str, void *key, void *state)
     }
     (void)state;
 }
-static void encrypt_caesar_decode(char *code, void *key, void *state)
+static void encrypt_caesar_decode(char **codetext, void *key, void *state)
 {
     int i, let, upper;
     int letshift = *((int *)key);
+    char *code = *codetext;
     for (i = 0; code[i] != '\0'; i++)
     {
         if (!isalpha(code[i]))
@@ -163,9 +166,10 @@ static void encrypt_vigenere_key_free(void *key)
 {
     free((int *)key);
 }
-static void encrypt_vigenere_encode(char *str, void *key, void *state)
+static void encrypt_vigenere_encode(char **text, void *key, void *state)
 {
     int i, let, upper;
+    char *str = *text;
     int letshift, letshift_cnt = 0;
     for (i = 0; str[i] != '\0'; i++)
     {
@@ -185,9 +189,10 @@ static void encrypt_vigenere_encode(char *str, void *key, void *state)
     }
     (void)state;
 }
-static void encrypt_vigenere_decode(char *code, void *key, void *state)
+static void encrypt_vigenere_decode(char **codetext, void *key, void *state)
 {
     int i, let, upper;
+    char *code = *codetext;
     int letshift, letshift_cnt = 0;
     for (i = 0; code[i] != '\0'; i++)
     {
