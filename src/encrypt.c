@@ -11,6 +11,8 @@ static void encrypt_none_state_free(void *state);
 static void encrypt_none_encode(char **str, void *key, void *state);
 static void encrypt_none_decode(char **code, void *key, void *state);
 
+static int roll_in_alphabeth(int i, int shift, int alphabeth_size);
+
 static void *encrypt_caesar_key_parse(const char *key);
 static void encrypt_caesar_key_free(void *key);
 
@@ -44,6 +46,19 @@ void encrypt_init()
     encryptors[ENCRYPT_VIGENERE].state_alloc = &encrypt_none_state_alloc;
     encryptors[ENCRYPT_VIGENERE].state_free = &encrypt_none_state_free;
     encryptors[ENCRYPT_VIGENERE].encode = &encrypt_vigenere_encode;
+}
+
+static int roll_in_alphabeth(int i, int shift, int alphabeth_size)
+{
+    if(i < 0)
+        return i;
+    if(alphabeth_size <= 0)
+        return 0;
+    i += shift;
+    while (i < 0)
+        i += alphabeth_size;
+
+    return i % alphabeth_size;
 }
 
 /*Do not encrypt data*/
@@ -111,9 +126,8 @@ static void encrypt_caesar_encode(char **text, void *key, void *state)
             continue;
 
         upper = isupper(str[i]);
-        let = upper ? (str[i] - 'A') : (str[i] - 'a');
-        let += letshift;
-        let %= 26;
+        let = tolower(str[i]) - 'a';
+        let = roll_in_alphabeth(let, letshift, 26);
         str[i] = upper ? (let + 'A') : (let + 'a');
     }
     (void)state;
@@ -121,7 +135,7 @@ static void encrypt_caesar_encode(char **text, void *key, void *state)
 static void encrypt_caesar_decode(char **codetext, void *key, void *state)
 {
     int i, let, upper;
-    int letshift = *((int *)key);
+    int letshift = (-1) * *((int *)key);
     char *code = *codetext;
     for (i = 0; code[i] != '\0'; i++)
     {
@@ -129,10 +143,8 @@ static void encrypt_caesar_decode(char **codetext, void *key, void *state)
             continue;
 
         upper = isupper(code[i]);
-        let = upper ? (code[i] - 'A') : (code[i] - 'a');
-        let -= letshift;
-        let += 26;
-        let %= 26;
+        let = tolower(code[i]) - 'a';
+        let = roll_in_alphabeth(let, letshift, 26);
 
         code[i] = upper ? (let + 'A') : (let + 'a');
     }
@@ -180,8 +192,7 @@ static void encrypt_vigenere_encode(char **text, void *key, void *state)
 
         upper = isupper(str[i]);
         let = tolower(str[i]) - 'a';
-        let += letshift;
-        let %= 26;
+        let = roll_in_alphabeth(let, letshift, 26);
         str[i] = upper ? (let + 'A') : (let + 'a');
 
         letshift_cnt++;
@@ -199,13 +210,11 @@ static void encrypt_vigenere_decode(char **codetext, void *key, void *state)
         if (!isalpha(code[i]))
             continue;
 
-        letshift = ((int *)key)[1 + letshift_cnt];
+        letshift = (-1) * ((int *)key)[1 + letshift_cnt];
 
         upper = isupper(code[i]);
-        let = upper ? (code[i] - 'A') : (code[i] - 'a');
-        let -= letshift;
-        let += 26;
-        let %= 26;
+        let = tolower(code[i]) - 'a';
+        let = roll_in_alphabeth(let, letshift, 26);
         code[i] = upper ? (let + 'A') : (let + 'a');
 
         letshift_cnt++;
