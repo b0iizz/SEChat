@@ -24,6 +24,8 @@ static void encrypt_vigenere_key_free(void *key);
 static void encrypt_vigenere_encode(char **str, void *key, void *state);
 static void encrypt_vigenere_decode(char **code, void *key, void *state);
 
+static void encrypt_rot13_encode(char **text, void *key, void *state);
+
 void encrypt_init()
 {
     encryptors[ENCRYPT_NONE].key_parse = &encrypt_none_key_parse;
@@ -40,12 +42,19 @@ void encrypt_init()
     encryptors[ENCRYPT_CAESAR].encode = &encrypt_caesar_encode;
     encryptors[ENCRYPT_CAESAR].decode = &encrypt_caesar_decode;
 
-    encryptors[ENCRYPT_VIGENERE].decode = &encrypt_vigenere_decode;
     encryptors[ENCRYPT_VIGENERE].key_parse = &encrypt_vigenere_key_parse;
     encryptors[ENCRYPT_VIGENERE].key_free = &encrypt_vigenere_key_free;
     encryptors[ENCRYPT_VIGENERE].state_alloc = &encrypt_none_state_alloc;
     encryptors[ENCRYPT_VIGENERE].state_free = &encrypt_none_state_free;
     encryptors[ENCRYPT_VIGENERE].encode = &encrypt_vigenere_encode;
+    encryptors[ENCRYPT_VIGENERE].decode = &encrypt_vigenere_decode;
+
+    encryptors[ENCRYPT_ROT13].key_parse = &encrypt_none_key_parse;
+    encryptors[ENCRYPT_ROT13].key_free = &encrypt_none_key_free;
+    encryptors[ENCRYPT_ROT13].state_alloc = &encrypt_none_state_alloc;
+    encryptors[ENCRYPT_ROT13].state_free = &encrypt_none_state_free;
+    encryptors[ENCRYPT_ROT13].encode = &encrypt_rot13_encode;
+    encryptors[ENCRYPT_ROT13].decode = &encrypt_rot13_encode;
 }
 
 static int roll_in_alphabeth(int i, int shift, int alphabeth_size)
@@ -220,5 +229,24 @@ static void encrypt_vigenere_decode(char **codetext, void *key, void *state)
         letshift_cnt++;
         letshift_cnt %= *((int *)key);
     }
+    (void)state;
+}
+
+/*Rot13-Encryption*/
+static void encrypt_rot13_encode(char **text, void *key, void *state)
+{
+    int i, let, upper;
+    char *str = *text;
+    for (i = 0; str[i] != '\0'; i++)
+    {
+        if (!isalpha(str[i]))
+            continue;
+
+        upper = isupper(str[i]);
+        let = tolower(str[i]) - 'a';
+        let = roll_in_alphabeth(let, 13, 26);
+        str[i] = upper ? (let + 'A') : (let + 'a');
+    }
+    (void)key;
     (void)state;
 }
