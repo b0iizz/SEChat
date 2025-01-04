@@ -28,6 +28,8 @@ static void encrypt_rot13_encode(char **text, void *key, void *state);
 
 static void encrypt_rot47_encode(char **text, void *key, void *state);
 
+static void encrypt_atbash_encode(char **text, void *key, void *state);
+
 void encrypt_init()
 {
     encryptors[ENCRYPT_NONE].key_parse = &encrypt_none_key_parse;
@@ -64,6 +66,13 @@ void encrypt_init()
     encryptors[ENCRYPT_ROT47].state_free = &encrypt_none_state_free;
     encryptors[ENCRYPT_ROT47].encode = &encrypt_rot47_encode;
     encryptors[ENCRYPT_ROT47].decode = &encrypt_rot47_encode;
+
+    encryptors[ENCRYPT_ATBASH].key_parse = &encrypt_none_key_parse;
+    encryptors[ENCRYPT_ATBASH].key_free = &encrypt_none_key_free;
+    encryptors[ENCRYPT_ATBASH].state_alloc = &encrypt_none_state_alloc;
+    encryptors[ENCRYPT_ATBASH].state_free = &encrypt_none_state_free;
+    encryptors[ENCRYPT_ATBASH].encode = &encrypt_atbash_encode;
+    encryptors[ENCRYPT_ATBASH].decode = &encrypt_atbash_encode;
 }
 
 static int roll_in_alphabeth(int i, int shift, int alphabeth_size)
@@ -271,6 +280,24 @@ static void encrypt_rot47_encode(char **text, void *key, void *state)
             continue;
 
         str[i] = 33 + roll_in_alphabeth(str[i] - 33, 47, 94);
+    }
+    (void)key;
+    (void)state;
+}
+
+/*Atbash-Encryption*/
+static void encrypt_atbash_encode(char **text, void *key, void *state)
+{
+    int i;
+    char *str = *text;
+    for (i = 0; str[i] != '\0'; i++)
+    {
+        if (!isalpha(str[i]))
+            continue;
+        if(isupper(str[i]))
+            str[i] = 'Z' - (str[i] - 'A');
+        if(islower(str[i]))
+            str[i] = 'z' - (str[i] - 'a');
     }
     (void)key;
     (void)state;
