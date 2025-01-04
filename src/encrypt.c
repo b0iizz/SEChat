@@ -26,6 +26,8 @@ static void encrypt_vigenere_decode(char **code, void *key, void *state);
 
 static void encrypt_rot13_encode(char **text, void *key, void *state);
 
+static void encrypt_rot47_encode(char **text, void *key, void *state);
+
 void encrypt_init()
 {
     encryptors[ENCRYPT_NONE].key_parse = &encrypt_none_key_parse;
@@ -55,6 +57,13 @@ void encrypt_init()
     encryptors[ENCRYPT_ROT13].state_free = &encrypt_none_state_free;
     encryptors[ENCRYPT_ROT13].encode = &encrypt_rot13_encode;
     encryptors[ENCRYPT_ROT13].decode = &encrypt_rot13_encode;
+
+    encryptors[ENCRYPT_ROT47].key_parse = &encrypt_none_key_parse;
+    encryptors[ENCRYPT_ROT47].key_free = &encrypt_none_key_free;
+    encryptors[ENCRYPT_ROT47].state_alloc = &encrypt_none_state_alloc;
+    encryptors[ENCRYPT_ROT47].state_free = &encrypt_none_state_free;
+    encryptors[ENCRYPT_ROT47].encode = &encrypt_rot47_encode;
+    encryptors[ENCRYPT_ROT47].decode = &encrypt_rot47_encode;
 }
 
 static int roll_in_alphabeth(int i, int shift, int alphabeth_size)
@@ -246,6 +255,22 @@ static void encrypt_rot13_encode(char **text, void *key, void *state)
         let = tolower(str[i]) - 'a';
         let = roll_in_alphabeth(let, 13, 26);
         str[i] = upper ? (let + 'A') : (let + 'a');
+    }
+    (void)key;
+    (void)state;
+}
+
+/*Rot47-Encryption*/
+static void encrypt_rot47_encode(char **text, void *key, void *state)
+{
+    int i;
+    char *str = *text;
+    for (i = 0; str[i] != '\0'; i++)
+    {
+        if (str[i] <= 32 ||str[i] == 127)
+            continue;
+
+        str[i] = 33 + roll_in_alphabeth(str[i] - 33, 47, 94);
     }
     (void)key;
     (void)state;
