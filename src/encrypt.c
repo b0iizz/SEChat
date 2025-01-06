@@ -84,13 +84,16 @@ static void *encrypt_caesar_key_parse(const char *key)
 {
     int i = 0;
     int *keyptr = malloc(sizeof(int));
+    if (!keyptr) return NULL;
     *keyptr = atoi(key);
     *keyptr %= 26;
     if(*keyptr == 0){
         while(key[i] != '\0' && isspace(key[i]))
             i++;
-        if(!isdigit(key[i]))
+        if(!isdigit(key[i])) {
+            free(keyptr);
             return NULL;
+         }
     }
 
     return keyptr;
