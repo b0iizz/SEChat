@@ -154,7 +154,7 @@ static void encrypt_caesar_encode(char **text, void *key, void *state)
 
         upper = isupper(str[i]);
         let = tolower(str[i]) - 'a';
-        let = roll_in_alphabeth(let, letshift, 26);
+        let = roll_in_alphabet(let, letshift, 26);
         str[i] = upper ? (let + 'A') : (let + 'a');
     }
     (void)state;
@@ -171,7 +171,7 @@ static void encrypt_caesar_decode(char **codetext, void *key, void *state)
 
         upper = isupper(code[i]);
         let = tolower(code[i]) - 'a';
-        let = roll_in_alphabeth(let, letshift, 26);
+        let = roll_in_alphabet(let, letshift, 26);
 
         code[i] = upper ? (let + 'A') : (let + 'a');
     }
@@ -219,7 +219,7 @@ static void encrypt_vigenere_encode(char **text, void *key, void *state)
 
         upper = isupper(str[i]);
         let = tolower(str[i]) - 'a';
-        let = roll_in_alphabeth(let, letshift, 26);
+        let = roll_in_alphabet(let, letshift, 26);
         str[i] = upper ? (let + 'A') : (let + 'a');
 
         letshift_cnt++;
@@ -241,7 +241,7 @@ static void encrypt_vigenere_decode(char **codetext, void *key, void *state)
 
         upper = isupper(code[i]);
         let = tolower(code[i]) - 'a';
-        let = roll_in_alphabeth(let, letshift, 26);
+        let = roll_in_alphabet(let, letshift, 26);
         code[i] = upper ? (let + 'A') : (let + 'a');
 
         letshift_cnt++;
@@ -262,7 +262,7 @@ static void encrypt_rot13_encode(char **text, void *key, void *state)
 
         upper = isupper(str[i]);
         let = tolower(str[i]) - 'a';
-        let = roll_in_alphabeth(let, 13, 26);
+        let = roll_in_alphabet(let, 13, 26);
         str[i] = upper ? (let + 'A') : (let + 'a');
     }
     (void)key;
@@ -279,7 +279,7 @@ static void encrypt_rot47_encode(char **text, void *key, void *state)
         if (str[i] <= 32 ||str[i] == 127)
             continue;
 
-        str[i] = 33 + roll_in_alphabeth(str[i] - 33, 47, 94);
+        str[i] = 33 + roll_in_alphabet(str[i] - 33, 47, 94);
     }
     (void)key;
     (void)state;
