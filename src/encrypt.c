@@ -75,17 +75,17 @@ void encrypt_init()
     encryptors[ENCRYPT_ATBASH].decode = &encrypt_atbash_encode;
 }
 
-static int roll_in_alphabeth(int i, int shift, int alphabeth_size)
+static int roll_in_alphabet(int i, int shift, int alphabet_size)
 {
     if(i < 0)
         return i;
-    if(alphabeth_size <= 0)
+    if(alphabet_size <= 0)
         return 0;
     i += shift;
     while (i < 0)
-        i += alphabeth_size;
+        i += alphabet_size;
 
-    return i % alphabeth_size;
+    return i % alphabet_size;
 }
 
 /*Do not encrypt data*/
