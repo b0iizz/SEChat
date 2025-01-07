@@ -11,7 +11,7 @@ static void encrypt_none_state_free(void *state);
 static void encrypt_none_encode(char **str, void *key, void *state);
 static void encrypt_none_decode(char **code, void *key, void *state);
 
-static int roll_in_alphabeth(int i, int shift, int alphabeth_size);
+static int roll_in_alphabet(int i, int shift, int alphabet_size);
 
 static void *encrypt_caesar_key_parse(const char *key);
 static void encrypt_caesar_key_free(void *key);
