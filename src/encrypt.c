@@ -149,7 +149,7 @@ static void *encrypt_caesar_key_parse(const char *key)
     int *keyptr = malloc(sizeof(int));
     if(keyptr == NULL)
         return NULL;
-
+    
     *keyptr = atoi(key);
     *keyptr %= 26;
     if(*keyptr == 0){
@@ -219,7 +219,6 @@ static void *encrypt_vigenere_key_parse(const char *key)
     keyptr = malloc((1 + str_size) * sizeof(int));
     if(keyptr == NULL)
         return NULL;
-
     keyptr[0] = str_size;
 
     for (i = 0; i < str_size; i++)
