@@ -138,6 +138,9 @@ static void *encrypt_caesar_key_parse(const char *key)
 {
     int i = 0;
     int *keyptr = malloc(sizeof(int));
+    if(keyptr = NULL)
+        return NULL;
+
     *keyptr = atoi(key);
     *keyptr %= 26;
     if(*keyptr == 0){
@@ -190,7 +193,6 @@ static void encrypt_caesar_decode(char **codetext, void *key, void *state)
     (void)state;
 }
 
-
 /*Vigenere-Cipher*/
 
 static void *encrypt_vigenere_key_parse(const char *key)
@@ -206,6 +208,9 @@ static void *encrypt_vigenere_key_parse(const char *key)
     }
 
     keyptr = malloc((1 + str_size) * sizeof(int));
+    if(keyptr = NULL)
+        return NULL;
+
     keyptr[0] = str_size;
 
     for (i = 0; i < str_size; i++)
@@ -263,6 +268,7 @@ static void encrypt_vigenere_decode(char **codetext, void *key, void *state)
 }
 
 /*Rot13-Encryption*/
+
 static void encrypt_rot13_encode(char **text, void *key, void *state)
 {
     int i, let, upper;
@@ -282,6 +288,7 @@ static void encrypt_rot13_encode(char **text, void *key, void *state)
 }
 
 /*Rot47-Encryption*/
+
 static void encrypt_rot47_encode(char **text, void *key, void *state)
 {
     int i;
@@ -298,6 +305,7 @@ static void encrypt_rot47_encode(char **text, void *key, void *state)
 }
 
 /*Atbash-Encryption*/
+
 static void encrypt_atbash_encode(char **text, void *key, void *state)
 {
     int i;
@@ -316,6 +324,7 @@ static void encrypt_atbash_encode(char **text, void *key, void *state)
 }
 
 /*Substitution-Cipher*/
+
 static void *encrypt_substitution_key_parse(const char *key)
 {
     char c;
