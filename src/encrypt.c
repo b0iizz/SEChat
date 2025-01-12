@@ -35,6 +35,8 @@ static void encrypt_substitution_key_free(void *key);
 static void encrypt_substitution_encode(char **str, void *key, void *state);
 static void encrypt_substitution_decode(char **code, void *key, void *state);
 
+static void *encrypt_pairwise_substitution_key_parse(const char *key);
+
 void encrypt_init()
 {
     encryptors[ENCRYPT_NONE].key_parse = &encrypt_none_key_parse;
@@ -85,6 +87,13 @@ void encrypt_init()
     encryptors[ENCRYPT_SUBSTITUTION].state_free = &encrypt_none_state_free;
     encryptors[ENCRYPT_SUBSTITUTION].encode = &encrypt_substitution_encode;
     encryptors[ENCRYPT_SUBSTITUTION].decode = &encrypt_substitution_decode;
+
+    encryptors[ENCRYPT_PAIRWISE_SUBSTITUTION].key_parse = &encrypt_pairwise_substitution_key_parse;
+    encryptors[ENCRYPT_PAIRWISE_SUBSTITUTION].key_free = &encrypt_substitution_key_free;
+    encryptors[ENCRYPT_PAIRWISE_SUBSTITUTION].state_alloc = &encrypt_none_state_alloc;
+    encryptors[ENCRYPT_PAIRWISE_SUBSTITUTION].state_free = &encrypt_none_state_free;
+    encryptors[ENCRYPT_PAIRWISE_SUBSTITUTION].encode = &encrypt_substitution_encode;
+    encryptors[ENCRYPT_PAIRWISE_SUBSTITUTION].decode = &encrypt_substitution_decode;
 }
 
 static int roll_in_alphabet(int i, int shift, int alphabet_size)
@@ -138,7 +147,7 @@ static void *encrypt_caesar_key_parse(const char *key)
 {
     int i = 0;
     int *keyptr = malloc(sizeof(int));
-    if(keyptr = NULL)
+    if(keyptr == NULL)
         return NULL;
 
     *keyptr = atoi(key);
@@ -208,7 +217,7 @@ static void *encrypt_vigenere_key_parse(const char *key)
     }
 
     keyptr = malloc((1 + str_size) * sizeof(int));
-    if(keyptr = NULL)
+    if(keyptr == NULL)
         return NULL;
 
     keyptr[0] = str_size;
@@ -378,9 +387,9 @@ static void encrypt_substitution_decode(char **codetext, void *key, void *state)
         upper = isupper(code[i]);
         let = tolower(code[i]) - 'a';
 
-        for (j = 0; i < 26; j++)
+        for (j = 0; j < 26; j++)
         {
-            if(((char *)key)[j]==let){
+            if(((char *)key)[j] == let){
                 let = j;
                 break;
             }
@@ -389,4 +398,35 @@ static void encrypt_substitution_decode(char **codetext, void *key, void *state)
         code[i] = upper ? (let + 'A') : (let + 'a');
     }
     (void)state;
+}
+
+/*Pairwise Substitution*/
+
+static void *encrypt_pairwise_substitution_key_parse(const char *key)
+{
+    char c;
+    int i;
+    char *keyptr;
+    for (c = 'a'; c <= 'z'; c++)
+    {
+        if(strchr(key, c) == NULL || strchr(key, c) != strrchr(key, c))
+            return NULL;
+    }
+
+    keyptr = malloc(26 * sizeof(char));
+
+    if(keyptr == NULL)
+        return NULL;
+
+    for(i = 0; i < 26; i++)
+        keyptr[i] = key[i] - 'a';
+
+    for(i = 0; i < 26; i++) {
+        if(keyptr[(int) keyptr[i]] != i){
+            free(keyptr);
+            return NULL;
+        }
+    }
+
+    return (void *)keyptr;
 }
