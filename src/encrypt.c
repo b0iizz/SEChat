@@ -30,6 +30,11 @@ static void encrypt_rot47_encode(char **text, void *key, void *state);
 
 static void encrypt_atbash_encode(char **text, void *key, void *state);
 
+static void *encrypt_substitution_key_parse(const char *key);
+static void encrypt_substitution_key_free(void *key);
+static void encrypt_substitution_encode(char **str, void *key, void *state);
+static void encrypt_substitution_decode(char **code, void *key, void *state);
+
 void encrypt_init()
 {
     encryptors[ENCRYPT_NONE].key_parse = &encrypt_none_key_parse;
@@ -73,6 +78,13 @@ void encrypt_init()
     encryptors[ENCRYPT_ATBASH].state_free = &encrypt_none_state_free;
     encryptors[ENCRYPT_ATBASH].encode = &encrypt_atbash_encode;
     encryptors[ENCRYPT_ATBASH].decode = &encrypt_atbash_encode;
+
+    encryptors[ENCRYPT_SUBSTITUTION].key_parse = &encrypt_substitution_key_parse;
+    encryptors[ENCRYPT_SUBSTITUTION].key_free = &encrypt_substitution_key_free;
+    encryptors[ENCRYPT_SUBSTITUTION].state_alloc = &encrypt_none_state_alloc;
+    encryptors[ENCRYPT_SUBSTITUTION].state_free = &encrypt_none_state_free;
+    encryptors[ENCRYPT_SUBSTITUTION].encode = &encrypt_substitution_encode;
+    encryptors[ENCRYPT_SUBSTITUTION].decode = &encrypt_substitution_decode;
 }
 
 static int roll_in_alphabet(int i, int shift, int alphabet_size)
@@ -300,5 +312,72 @@ static void encrypt_atbash_encode(char **text, void *key, void *state)
             str[i] = 'z' - (str[i] - 'a');
     }
     (void)key;
+    (void)state;
+}
+
+/*Substitution-Cipher*/
+static void *encrypt_substitution_key_parse(const char *key)
+{
+    char c;
+    int i;
+    char *keyptr;
+    for (c = 'a'; c <= 'z'; c++)
+    {
+        if(strchr(key, c) == NULL || strchr(key, c) != strrchr(key, c))
+            return NULL;
+    }
+
+    keyptr = malloc(26 * sizeof(char));
+
+    if(keyptr == NULL)
+        return NULL;
+
+    for(i = 0; i < 26; i++)
+        keyptr[i] = key[i] - 'a';
+
+    return (void *)keyptr;
+}
+static void encrypt_substitution_key_free(void *key)
+{
+    free((char *)key);
+}
+static void encrypt_substitution_encode(char **text, void *key, void *state)
+{
+    int i, let, upper;
+    char *str = *text;
+    for (i = 0; str[i] != '\0'; i++)
+    {
+        if (!isalpha(str[i]))
+            continue;
+
+        upper = isupper(str[i]);
+        let = tolower(str[i]) - 'a';
+        let = ((char *)key)[let];
+        str[i] = upper ? (let + 'A') : (let + 'a');
+    }
+    (void)state;
+}
+static void encrypt_substitution_decode(char **codetext, void *key, void *state)
+{
+    int i, j, let, upper;
+    char *code = *codetext;
+    for (i = 0; code[i] != '\0'; i++)
+    {
+        if (!isalpha(code[i]))
+            continue;
+
+        upper = isupper(code[i]);
+        let = tolower(code[i]) - 'a';
+
+        for (j = 0; i < 26; j++)
+        {
+            if(((char *)key)[j]==let){
+                let = j;
+                break;
+            }
+        }
+
+        code[i] = upper ? (let + 'A') : (let + 'a');
+    }
     (void)state;
 }
