@@ -1,8 +1,6 @@
 #ifndef NET_H_
 #define NET_H_
 
-#include "packet.h"
-#include "socketxp.h"
 #include "encrypt.h"
 
 typedef int netResult;
