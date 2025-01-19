@@ -2,8 +2,8 @@
 #include <limits.h>
 #include <string.h>
 
-static parseResult packet_recv_buf(net_buffer_t *pak, char **buf, size_t *size);
-static parseResult packet_send_buf(net_buffer_t *pak, const char *buf, size_t size);
+static parseResult packet_recv_buf(net_buffer_t *pak, char **buf, unsigned long *size);
+static parseResult packet_send_buf(net_buffer_t *pak, const char *buf, unsigned long size);
 
 parseResult packet_realloc(net_buffer_t *pak, size_t capacity)
 {
@@ -84,7 +84,7 @@ parseResult packet_send_packet(net_buffer_t *pak, const net_buffer_t *buf)
   return packet_send_buf(pak, buf->buffer, buf->size);
 }
 
-static parseResult packet_recv_buf(net_buffer_t *pak, char **buf, size_t *size)
+static parseResult packet_recv_buf(net_buffer_t *pak, char **buf, unsigned long *size)
 {
   long int length;
   parseResult parsed;
@@ -102,7 +102,7 @@ static parseResult packet_recv_buf(net_buffer_t *pak, char **buf, size_t *size)
 }
 
 
-static parseResult packet_send_buf(net_buffer_t *pak, const char *buf, size_t size)
+static parseResult packet_send_buf(net_buffer_t *pak, const char *buf, unsigned long size)
 {
   parseResult parsed;
   if (size >= (size_t) LONG_MAX) return PACKET_ERROR;
