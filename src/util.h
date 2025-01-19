@@ -5,5 +5,6 @@
 #include <string.h>
 
 int util_strcpy(char** dst, const char *src, int on_success, int on_failure);
+int util_startswith(const char *str, const char *prefix);
 
 #endif /* UTIL_H_ */

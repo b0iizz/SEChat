@@ -11,3 +11,9 @@ int util_strcpy(char** dst, const char *src, int on_success, int on_failure) {
   return on_success;
 }
 
+int util_startswith(const char *str, const char *prefix) {
+  while (*prefix != '\0') {
+    if (*(str++) != *(prefix++)) return 0;
+  }
+  return 1;
+}
