@@ -17,6 +17,7 @@ set(sources
   src/encrypt.c
   src/packet.c
   src/util.c
+  src/protocol.c
 )
 
 if(WIN32)
