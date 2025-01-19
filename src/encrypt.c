@@ -11,6 +11,8 @@ static void encrypt_none_state_free(void *state);
 static void encrypt_none_encode(char **str, void *key, void *state);
 static void encrypt_none_decode(char **code, void *key, void *state);
 
+static int roll_in_alphabet(int i, int shift, int alphabet_size);
+
 static void *encrypt_caesar_key_parse(const char *key);
 static void encrypt_caesar_key_free(void *key);
 
@@ -21,6 +23,19 @@ static void *encrypt_vigenere_key_parse(const char *key);
 static void encrypt_vigenere_key_free(void *key);
 static void encrypt_vigenere_encode(char **str, void *key, void *state);
 static void encrypt_vigenere_decode(char **code, void *key, void *state);
+
+static void encrypt_rot13_encode(char **text, void *key, void *state);
+
+static void encrypt_rot47_encode(char **text, void *key, void *state);
+
+static void encrypt_atbash_encode(char **text, void *key, void *state);
+
+static void *encrypt_substitution_key_parse(const char *key);
+static void encrypt_substitution_key_free(void *key);
+static void encrypt_substitution_encode(char **str, void *key, void *state);
+static void encrypt_substitution_decode(char **code, void *key, void *state);
+
+static void *encrypt_pairwise_substitution_key_parse(const char *key);
 
 void encrypt_init()
 {
@@ -38,12 +53,60 @@ void encrypt_init()
     encryptors[ENCRYPT_CAESAR].encode = &encrypt_caesar_encode;
     encryptors[ENCRYPT_CAESAR].decode = &encrypt_caesar_decode;
 
-    encryptors[ENCRYPT_VIGENERE].decode = &encrypt_vigenere_decode;
     encryptors[ENCRYPT_VIGENERE].key_parse = &encrypt_vigenere_key_parse;
     encryptors[ENCRYPT_VIGENERE].key_free = &encrypt_vigenere_key_free;
     encryptors[ENCRYPT_VIGENERE].state_alloc = &encrypt_none_state_alloc;
     encryptors[ENCRYPT_VIGENERE].state_free = &encrypt_none_state_free;
     encryptors[ENCRYPT_VIGENERE].encode = &encrypt_vigenere_encode;
+    encryptors[ENCRYPT_VIGENERE].decode = &encrypt_vigenere_decode;
+
+    encryptors[ENCRYPT_ROT13].key_parse = &encrypt_none_key_parse;
+    encryptors[ENCRYPT_ROT13].key_free = &encrypt_none_key_free;
+    encryptors[ENCRYPT_ROT13].state_alloc = &encrypt_none_state_alloc;
+    encryptors[ENCRYPT_ROT13].state_free = &encrypt_none_state_free;
+    encryptors[ENCRYPT_ROT13].encode = &encrypt_rot13_encode;
+    encryptors[ENCRYPT_ROT13].decode = &encrypt_rot13_encode;
+
+    encryptors[ENCRYPT_ROT47].key_parse = &encrypt_none_key_parse;
+    encryptors[ENCRYPT_ROT47].key_free = &encrypt_none_key_free;
+    encryptors[ENCRYPT_ROT47].state_alloc = &encrypt_none_state_alloc;
+    encryptors[ENCRYPT_ROT47].state_free = &encrypt_none_state_free;
+    encryptors[ENCRYPT_ROT47].encode = &encrypt_rot47_encode;
+    encryptors[ENCRYPT_ROT47].decode = &encrypt_rot47_encode;
+
+    encryptors[ENCRYPT_ATBASH].key_parse = &encrypt_none_key_parse;
+    encryptors[ENCRYPT_ATBASH].key_free = &encrypt_none_key_free;
+    encryptors[ENCRYPT_ATBASH].state_alloc = &encrypt_none_state_alloc;
+    encryptors[ENCRYPT_ATBASH].state_free = &encrypt_none_state_free;
+    encryptors[ENCRYPT_ATBASH].encode = &encrypt_atbash_encode;
+    encryptors[ENCRYPT_ATBASH].decode = &encrypt_atbash_encode;
+
+    encryptors[ENCRYPT_SUBSTITUTION].key_parse = &encrypt_substitution_key_parse;
+    encryptors[ENCRYPT_SUBSTITUTION].key_free = &encrypt_substitution_key_free;
+    encryptors[ENCRYPT_SUBSTITUTION].state_alloc = &encrypt_none_state_alloc;
+    encryptors[ENCRYPT_SUBSTITUTION].state_free = &encrypt_none_state_free;
+    encryptors[ENCRYPT_SUBSTITUTION].encode = &encrypt_substitution_encode;
+    encryptors[ENCRYPT_SUBSTITUTION].decode = &encrypt_substitution_decode;
+
+    encryptors[ENCRYPT_PAIRWISE_SUBSTITUTION].key_parse = &encrypt_pairwise_substitution_key_parse;
+    encryptors[ENCRYPT_PAIRWISE_SUBSTITUTION].key_free = &encrypt_substitution_key_free;
+    encryptors[ENCRYPT_PAIRWISE_SUBSTITUTION].state_alloc = &encrypt_none_state_alloc;
+    encryptors[ENCRYPT_PAIRWISE_SUBSTITUTION].state_free = &encrypt_none_state_free;
+    encryptors[ENCRYPT_PAIRWISE_SUBSTITUTION].encode = &encrypt_substitution_encode;
+    encryptors[ENCRYPT_PAIRWISE_SUBSTITUTION].decode = &encrypt_substitution_decode;
+}
+
+static int roll_in_alphabet(int i, int shift, int alphabet_size)
+{
+    if(i < 0)
+        return i;
+    if(alphabet_size <= 0)
+        return 0;
+    i += shift;
+    while (i < 0)
+        i += alphabet_size;
+
+    return i % alphabet_size;
 }
 
 /*Do not encrypt data*/
@@ -114,9 +177,8 @@ static void encrypt_caesar_encode(char **text, void *key, void *state)
             continue;
 
         upper = isupper(str[i]);
-        let = upper ? (str[i] - 'A') : (str[i] - 'a');
-        let += letshift;
-        let %= 26;
+        let = tolower(str[i]) - 'a';
+        let = roll_in_alphabet(let, letshift, 26);
         str[i] = upper ? (let + 'A') : (let + 'a');
     }
     (void)state;
@@ -124,7 +186,7 @@ static void encrypt_caesar_encode(char **text, void *key, void *state)
 static void encrypt_caesar_decode(char **codetext, void *key, void *state)
 {
     int i, let, upper;
-    int letshift = *((int *)key);
+    int letshift = (-1) * *((int *)key);
     char *code = *codetext;
     for (i = 0; code[i] != '\0'; i++)
     {
@@ -132,16 +194,13 @@ static void encrypt_caesar_decode(char **codetext, void *key, void *state)
             continue;
 
         upper = isupper(code[i]);
-        let = upper ? (code[i] - 'A') : (code[i] - 'a');
-        let -= letshift;
-        let += 26;
-        let %= 26;
+        let = tolower(code[i]) - 'a';
+        let = roll_in_alphabet(let, letshift, 26);
 
         code[i] = upper ? (let + 'A') : (let + 'a');
     }
     (void)state;
 }
-
 
 /*Vigenere-Cipher*/
 
@@ -158,6 +217,8 @@ static void *encrypt_vigenere_key_parse(const char *key)
     }
 
     keyptr = malloc((1 + str_size) * sizeof(int));
+    if(keyptr == NULL)
+        return NULL;
     keyptr[0] = str_size;
 
     for (i = 0; i < str_size; i++)
@@ -183,8 +244,7 @@ static void encrypt_vigenere_encode(char **text, void *key, void *state)
 
         upper = isupper(str[i]);
         let = tolower(str[i]) - 'a';
-        let += letshift;
-        let %= 26;
+        let = roll_in_alphabet(let, letshift, 26);
         str[i] = upper ? (let + 'A') : (let + 'a');
 
         letshift_cnt++;
@@ -202,17 +262,170 @@ static void encrypt_vigenere_decode(char **codetext, void *key, void *state)
         if (!isalpha(code[i]))
             continue;
 
-        letshift = ((int *)key)[1 + letshift_cnt];
+        letshift = (-1) * ((int *)key)[1 + letshift_cnt];
 
         upper = isupper(code[i]);
-        let = upper ? (code[i] - 'A') : (code[i] - 'a');
-        let -= letshift;
-        let += 26;
-        let %= 26;
+        let = tolower(code[i]) - 'a';
+        let = roll_in_alphabet(let, letshift, 26);
         code[i] = upper ? (let + 'A') : (let + 'a');
 
         letshift_cnt++;
         letshift_cnt %= *((int *)key);
     }
     (void)state;
+}
+
+/*Rot13-Encryption*/
+
+static void encrypt_rot13_encode(char **text, void *key, void *state)
+{
+    int i, let, upper;
+    char *str = *text;
+    for (i = 0; str[i] != '\0'; i++)
+    {
+        if (!isalpha(str[i]))
+            continue;
+
+        upper = isupper(str[i]);
+        let = tolower(str[i]) - 'a';
+        let = roll_in_alphabet(let, 13, 26);
+        str[i] = upper ? (let + 'A') : (let + 'a');
+    }
+    (void)key;
+    (void)state;
+}
+
+/*Rot47-Encryption*/
+
+static void encrypt_rot47_encode(char **text, void *key, void *state)
+{
+    int i;
+    char *str = *text;
+    for (i = 0; str[i] != '\0'; i++)
+    {
+        if (str[i] <= 32 ||str[i] == 127)
+            continue;
+
+        str[i] = 33 + roll_in_alphabet(str[i] - 33, 47, 94);
+    }
+    (void)key;
+    (void)state;
+}
+
+/*Atbash-Encryption*/
+
+static void encrypt_atbash_encode(char **text, void *key, void *state)
+{
+    int i;
+    char *str = *text;
+    for (i = 0; str[i] != '\0'; i++)
+    {
+        if (!isalpha(str[i]))
+            continue;
+        if(isupper(str[i]))
+            str[i] = 'Z' - (str[i] - 'A');
+        if(islower(str[i]))
+            str[i] = 'z' - (str[i] - 'a');
+    }
+    (void)key;
+    (void)state;
+}
+
+/*Substitution-Cipher*/
+
+static void *encrypt_substitution_key_parse(const char *key)
+{
+    char c;
+    int i;
+    char *keyptr;
+    for (c = 'a'; c <= 'z'; c++)
+    {
+        if(strchr(key, c) == NULL || strchr(key, c) != strrchr(key, c))
+            return NULL;
+    }
+
+    keyptr = malloc(26 * sizeof(char));
+
+    if(keyptr == NULL)
+        return NULL;
+
+    for(i = 0; i < 26; i++)
+        keyptr[i] = key[i] - 'a';
+
+    return (void *)keyptr;
+}
+static void encrypt_substitution_key_free(void *key)
+{
+    free((char *)key);
+}
+static void encrypt_substitution_encode(char **text, void *key, void *state)
+{
+    int i, let, upper;
+    char *str = *text;
+    for (i = 0; str[i] != '\0'; i++)
+    {
+        if (!isalpha(str[i]))
+            continue;
+
+        upper = isupper(str[i]);
+        let = tolower(str[i]) - 'a';
+        let = ((char *)key)[let];
+        str[i] = upper ? (let + 'A') : (let + 'a');
+    }
+    (void)state;
+}
+static void encrypt_substitution_decode(char **codetext, void *key, void *state)
+{
+    int i, j, let, upper;
+    char *code = *codetext;
+    for (i = 0; code[i] != '\0'; i++)
+    {
+        if (!isalpha(code[i]))
+            continue;
+
+        upper = isupper(code[i]);
+        let = tolower(code[i]) - 'a';
+
+        for (j = 0; j < 26; j++)
+        {
+            if(((char *)key)[j] == let){
+                let = j;
+                break;
+            }
+        }
+
+        code[i] = upper ? (let + 'A') : (let + 'a');
+    }
+    (void)state;
+}
+
+/*Pairwise Substitution*/
+
+static void *encrypt_pairwise_substitution_key_parse(const char *key)
+{
+    char c;
+    int i;
+    char *keyptr;
+    for (c = 'a'; c <= 'z'; c++)
+    {
+        if(strchr(key, c) == NULL || strchr(key, c) != strrchr(key, c))
+            return NULL;
+    }
+
+    keyptr = malloc(26 * sizeof(char));
+
+    if(keyptr == NULL)
+        return NULL;
+
+    for(i = 0; i < 26; i++)
+        keyptr[i] = key[i] - 'a';
+
+    for(i = 0; i < 26; i++) {
+        if(keyptr[(int) keyptr[i]] != i){
+            free(keyptr);
+            return NULL;
+        }
+    }
+
+    return (void *)keyptr;
 }
