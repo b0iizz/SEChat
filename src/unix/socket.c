@@ -24,13 +24,14 @@ sxpResult sxp_destroy(sxp_t *sock)
   return SXP_SUCCESS;
 }
 
-sxpResult sxp_nbio_set(sxp_t *sock, int nonblockingio) {
+sxpResult sxp_nbio_set(sxp_t *sock, int nonblockingio)
+{
   long int enabler = nonblockingio == SXP_NONBLOCKING ? O_NONBLOCK : 0;
   long int disabler = nonblockingio == SXP_BLOCKING ? ~O_NONBLOCK : ~0;
   long int flags = fcntl(*sock, F_GETFL, 0);
   if (!sock) return SXP_ERROR_INVAL;
   if (flags < 0 || fcntl(*sock, F_SETFL, enabler | (disabler & flags)) < 0) {
-      return SXP_ERROR_UNKNOWN;
+    return SXP_ERROR_UNKNOWN;
   }
   return SXP_SUCCESS;
 }
@@ -53,7 +54,8 @@ sxpResult sxp_bind(sxp_t *sock, const sockaddr_t *address, size_t addrlen)
 {
   int yes = 1;
   if (!sock) return SXP_ERROR_INVAL;
-  if (setsockopt(*sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) < 0) return sxp_map_error(errno);
+  if (setsockopt(*sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) < 0)
+    return sxp_map_error(errno);
   if (bind(*sock, address, addrlen) < 0) return sxp_map_error(errno);
   return SXP_SUCCESS;
 }
@@ -129,6 +131,7 @@ static sxpResult sxp_map_eai_error(int error, int system_errno)
 static sxpResult sxp_map_error(int error)
 {
   switch (error) {
+    case 0: return SXP_SUCCESS;
     case EAFNOSUPPORT:
     case EPROTONOSUPPORT:
     case EPROTOTYPE: return SXP_ERROR_PLATFORM;

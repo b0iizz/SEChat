@@ -44,8 +44,8 @@ netResult net_exit()
 netResult net_connect(const char *hostname, const char *port)
 {
   netResult result;
-  net_buffer_t packet;
-  struct protocol_packet handshake;
+  net_buffer_t packet = {0};
+  struct protocol_packet handshake = {0};
 
   if (is_server >= 0) return NET_ERROR;
   is_server = 0;
@@ -123,7 +123,7 @@ netResult net_tick()
   net_buffer_t incoming = {0};
   struct protocol_packet request = {0};
 
-  if (is_server < 0) return NET_ERROR;
+  if (is_server < 0) return NET_SUCCESS;
 
   if ((result = netio_tick()) != NET_SUCCESS) return result;
   while ((result = netio_recv(&sender, &incoming)) == NET_SUCCESS) {
@@ -302,7 +302,7 @@ netResult net_message_recv(struct net_message *buffer, size_t *count, size_t lim
   size_t max_count;
   size_t idx;
 
-  if (is_server < 0) return NET_ERROR;
+  if (is_server < 0) return NET_TRY_AGAIN;
 
   if (flags & NET_FHISTORY) {
     read_start = message_last_seen - limit;
@@ -314,6 +314,8 @@ netResult net_message_recv(struct net_message *buffer, size_t *count, size_t lim
     max_count = max_count > limit ? limit : max_count;
     message_last_seen += max_count;
   }
+
+  if (max_count == 0) return NET_TRY_AGAIN;
 
   for (idx = 0; idx < max_count && result == NET_SUCCESS; idx++) {
     buffer[idx].person_id = messages[read_start + idx].person_id;
@@ -376,6 +378,7 @@ static netResult person_make(int who)
   if (who < 0) return NET_ERROR;
   if (person_exists(who)) return NET_ERROR;
 
+
   if ((size_t) who >= person_count) {
     size_t i;
     for (i = 0; i < ENCRYPT_MAX_VAL; i++) {
@@ -401,6 +404,7 @@ static netResult person_make(int who)
     memset(person_name + person_count, 0, (who + 1 - person_count) * sizeof(*person_name));
     person_count = who + 1;
   }
+
 
   result = util_strcpy(&person_name[who], "", NET_SUCCESS, NET_ERROR);
   if (result == NET_SUCCESS) {

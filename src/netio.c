@@ -20,9 +20,17 @@ static netResult push_data(struct netio_connection_info *connection);
 
 static netResult setup_connection(sxp_t socket);
 
-netResult netio_init() { sxp_init(); return NET_SUCCESS;}
+netResult netio_init()
+{
+  sxp_init();
+  return NET_SUCCESS;
+}
 
-netResult netio_exit() { sxp_cleanup(); return NET_SUCCESS;}
+netResult netio_exit()
+{
+  sxp_cleanup();
+  return NET_SUCCESS;
+}
 
 netResult netio_connect(const char *hostname, const char *port)
 {
@@ -125,7 +133,7 @@ netResult netio_serve(const char *port)
 
   netio_connection_count = 0;
 
-  netio_accepts_sockets = 0;
+  netio_accepts_sockets = 1;
 
   if ((result = setup_connection(server)) != NET_SUCCESS) goto end_socket;
 
@@ -168,7 +176,7 @@ netResult netio_tick()
   if ((result = sxp_poll(&event_count, netio_poll_list, netio_active_count, NETIO_TIMEOUT))
       != SXP_SUCCESS) {
     switch (result) {
-      case SXP_TRY_AGAIN: return NET_TRY_AGAIN;
+      case SXP_TRY_AGAIN: return NET_SUCCESS;
       default: return NET_ERROR;
     }
   }
@@ -243,9 +251,11 @@ netResult netio_recv(connection_t *who, net_buffer_t *packet)
 netResult netio_send(connection_t who, const net_buffer_t *packet)
 {
   if (!netio_connection_active(who)) return NET_ERROR;
+
   if (netio_connections[who].send_buffer.size + packet->size + sizeof(unsigned long)
-      > NETIO_BUFFER_MAX_SIZE)
+      > NETIO_BUFFER_MAX_SIZE) {
     return NET_ERROR;
+  }
   if (packet_send_packet(&(netio_connections[who].send_buffer), packet) != PACKET_SUCCESS)
     return NET_ERROR;
   return NET_SUCCESS;
@@ -312,17 +322,17 @@ static netResult pull_data(struct netio_connection_info *connection)
   char buf[NETIO_READ_MAX];
   while ((result = sxp_recv(&(connection->socket), buf, &num_read, NETIO_READ_MAX))
          == SXP_SUCCESS) {
-    if (num_read == 0) return NET_ERROR;
+    if (num_read == 0) return NET_SUCCESS;
     old_capacity = connection->recv_buffer.capacity;
     new_capacity = connection->recv_buffer.capacity + num_read;
-    if (new_capacity > NETIO_BUFFER_MAX_SIZE) {
-      old_capacity -= connection->recv_buffer.size;
-      new_capacity -= connection->recv_buffer.size;
-      memmove(connection->recv_buffer.buffer,
-              connection->recv_buffer.buffer + connection->recv_buffer.size, old_capacity);
-      connection->recv_buffer.size = 0;
-      if (new_capacity > NETIO_BUFFER_MAX_SIZE) return NET_ERROR;
-    }
+     if (new_capacity > NETIO_BUFFER_MAX_SIZE) {
+       old_capacity -= connection->recv_buffer.size;
+       new_capacity -= connection->recv_buffer.size;
+       memmove(connection->recv_buffer.buffer,
+               connection->recv_buffer.buffer + connection->recv_buffer.size, old_capacity);
+       connection->recv_buffer.size = 0;
+       if (new_capacity > NETIO_BUFFER_MAX_SIZE) return NET_ERROR;
+     }
     if (packet_realloc(&(connection->recv_buffer), new_capacity) != PACKET_SUCCESS)
       return NET_ERROR;
     memcpy(connection->recv_buffer.buffer + old_capacity, buf, num_read);
