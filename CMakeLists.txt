@@ -16,6 +16,7 @@ set(sources
   src/interface.c
   src/encrypt.c
   src/packet.c
+  src/net.c
   src/netio.c
   src/util.c
   src/protocol.c
