@@ -51,7 +51,9 @@ sxpResult sxp_addrinfo_free(addrinfo_t *info)
 /*server-side API*/
 sxpResult sxp_bind(sxp_t *sock, const sockaddr_t *address, size_t addrlen)
 {
+  int yes = 1;
   if (!sock) return SXP_ERROR_INVAL;
+  if (setsockopt(*sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) < 0) return sxp_map_error(errno);
   if (bind(*sock, address, addrlen) < 0) return sxp_map_error(errno);
   return SXP_SUCCESS;
 }
@@ -133,6 +135,7 @@ static sxpResult sxp_map_error(int error)
     case ENFILE:
     case EMFILE:
     case ENOBUFS: return SXP_ERROR_PLATFORM;
+    case ENOPROTOOPT:
     case ENAMETOOLONG:
     case EADDRINUSE:
     case EADDRNOTAVAIL:

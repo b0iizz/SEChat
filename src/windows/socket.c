@@ -65,7 +65,9 @@ sxpResult sxp_addrinfo_free(addrinfo_t *info)
 /*server-side API*/
 sxpResult sxp_bind(sxp_t *sock, const sockaddr_t *address, size_t addrlen)
 {
+  int yes = 1;
   if (!sock) return SXP_ERROR_INVAL;
+  if (setsockopt(*sock, SOL_SOCKET, SO_REAUSEADDR, &yes, sizeof(yes))) return sxp_map_error(WSAGetLastError());
   if (bind(*sock, address, addrlen)) return sxp_map_error(WSAGetLastError());
   return SXP_SUCCESS;
 }
@@ -135,6 +137,7 @@ static sxpResult sxp_map_eai_error(int error)
 static sxpResult sxp_map_error(int error)
 {
   switch (error) {
+    case WSAENOPROTOOPT:
     case WSAEISCONN:
     case WSAEADDRINUSE:
     case WSAEADDRNOTAVAIL:
