@@ -9,10 +9,13 @@ static void *encrypt_none_key_parse(const char *key);
 static void encrypt_none_key_free(void *key);
 static void *encrypt_none_state_alloc();
 static void encrypt_none_state_free(void *state);
-static void encrypt_none_encode(char **str, void *key, void *state);
-static void encrypt_none_decode(char **code, void *key, void *state);
+static void encrypt_none_encode(char **text, void *key, void *state);
+static void encrypt_none_decode(char **text, void *key, void *state);
 
 static int roll_in_alphabet(int i, int shift, int alphabet_size);
+
+static void encrypt_rail_fence_encode(char **str, void *key, void *state);
+static void encrypt_rail_fence_decode(char **code, void *key, void *state);
 
 static void *encrypt_caesar_key_parse(const char *key);
 static void encrypt_caesar_key_free(void *key);
@@ -48,6 +51,13 @@ void encrypt_init()
     encryptors[ENCRYPT_NONE].state_free = &encrypt_none_state_free;
     encryptors[ENCRYPT_NONE].encode = &encrypt_none_encode;
     encryptors[ENCRYPT_NONE].decode = &encrypt_none_decode;
+
+    encryptors[ENCRYPT_RAIL_FENCE].key_parse = &encrypt_none_key_parse;
+    encryptors[ENCRYPT_RAIL_FENCE].key_free = &encrypt_none_key_free;
+    encryptors[ENCRYPT_RAIL_FENCE].state_alloc = &encrypt_none_state_alloc;
+    encryptors[ENCRYPT_RAIL_FENCE].state_free = &encrypt_none_state_free;
+    encryptors[ENCRYPT_RAIL_FENCE].encode = &encrypt_rail_fence_encode;
+    encryptors[ENCRYPT_RAIL_FENCE].decode = &encrypt_rail_fence_decode;
 
     encryptors[ENCRYPT_CAESAR].key_parse = &encrypt_caesar_key_parse;
     encryptors[ENCRYPT_CAESAR].key_free = &encrypt_caesar_key_free;
@@ -149,6 +159,76 @@ static void encrypt_none_decode(char **code, void *key, void *state)
     (void)code;
     (void)key;
     (void)state;
+}
+
+/*Rail-Fence-Encryption*/
+
+static void encrypt_rail_fence_encode(char **text, void *key, void *state)
+{
+    int i, j, strl;
+    char *str = *text;
+    char *code;
+    strl = strlen(str);
+    code = malloc((strl + 1) * sizeof(char));
+    if(code == NULL)
+        return;
+
+    j = 0;
+    for (i = 0; i < strl; i += 4){
+        code[j] = str[i];
+        j++;
+    }
+
+    for (i = 1; i < strl; i += 2){
+        code[j] = str[i];
+        j++;
+    }
+
+    for (i = 2; i < strl; i += 4){
+        code[j] = str[i];
+        j++;
+    }
+
+    code[strl] = '\0';
+
+    free(*text);
+    *text = code;
+    (void) key;
+    (void) state;
+}
+
+static void encrypt_rail_fence_decode(char **text, void *key, void *state)
+{
+    int i, j, strl;
+    char *code = *text;
+    char *str;
+    strl = strlen(code);
+    str = malloc((strl + 1) * sizeof(char));
+    if(str == NULL)
+        return;
+
+    j = 0;
+    for (i = 0; i < strl; i += 4){
+        str[i] = code[j];
+        j++;
+    }
+
+    for (i = 1; i < strl; i += 2){
+        str[i] = code[j];
+        j++;
+    }
+
+    for (i = 2; i < strl; i += 4){
+        str[i] = code[j];
+        j++;
+    }
+
+    str[strl] = '\0';
+
+    free(str);
+    *text = code;
+    (void) key;
+    (void) state;
 }
 
 /*Caesar-Cipher*/
