@@ -166,6 +166,7 @@ netResult net_name_set(int person, const char *name)
 
   if (is_server && !person_exists(person)) return NET_ERROR;
   if (!is_server && person != self_person_id) return NET_ERROR;
+  if (!is_server && person < 0) return NET_ERROR;
 
   update.type = NET_PROTO_PERSON;
   update.as.person.person_id = person;
@@ -237,6 +238,10 @@ netResult net_key_set(int person, int method, const char *key)
   result = util_strcpy(&person_encrypt_plain[method][person], key, NET_SUCCESS, NET_ERROR);
   if (result == NET_SUCCESS) {
     person_encrypt_key[method][person] = encryptors[method].key_parse(key);
+    if (!person_encrypt_key[method][person]) {
+      free(&person_encrypt_plain[method][person]);
+      person_encrypt_plain[method][person] = NULL;
+    }
     person_encrypt_state[method][person] = encryptors[method].state_alloc();
   }
   return result;
@@ -275,9 +280,16 @@ netResult net_message_send(int encryption, const char *message)
   packet.type = NET_PROTO_MESSAGE;
   packet.as.message.person_id = self_person_id;
   packet.as.message.index = -1;
-  packet.as.message.encryption = encryption;
+  packet.as.message.encryption =
+      person_encrypt_plain[encryption][self_person_id] ? encryption : ENCRYPT_NONE;
   packet.as.message.message = NULL;
   result = util_strcpy(&packet.as.message.message, message, NET_SUCCESS, NET_ERROR);
+
+  if (person_encrypt_plain[encryption][self_person_id]) {
+    encryptors[encryption].encode(&packet.as.message.message,
+                                  person_encrypt_key[encryption][self_person_id],
+                                  person_encrypt_state[encryption][self_person_id]);
+  }
 
   if (result == NET_SUCCESS)
     result = packet_serialize(&outgoing, &packet) == PACKET_SUCCESS ? NET_SUCCESS : NET_ERROR;
@@ -307,7 +319,7 @@ netResult net_message_recv(struct net_message *buffer, size_t *count, size_t lim
   if (flags & NET_FHISTORY) {
     read_start = message_last_seen - limit;
     read_start = read_start > 0 ? read_start : 0;
-    max_count = message_last_seen - read_start;
+    max_count = message_last_seen - read_start + 1;
   } else {
     read_start = message_last_seen + 1;
     max_count = messages_count - read_start;
@@ -594,6 +606,7 @@ static netResult handle_packet_person(connection_t sender, struct protocol_packe
   }
 
   if (result == NET_SUCCESS) {
+    if (person_name[packet->as.person.person_id]) free(person_name[packet->as.person.person_id]);
     result = util_strcpy(&person_name[packet->as.person.person_id], packet->as.person.name,
                          NET_SUCCESS, NET_ERROR);
   }

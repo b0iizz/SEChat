@@ -105,6 +105,7 @@ sxpResult sxp_recv(sxp_t *sock, char *data, size_t *num_read, size_t size)
 sxpResult sxp_poll(size_t /*maybe NULL*/ *results, pollsxp_t sxps[], size_t sxpcount, int timeout)
 {
   ssize_t result;
+  if (!sxpcount) return SXP_TRY_AGAIN;
   if (!sxps) return SXP_ERROR_INVAL;
   if ((result = poll(sxps, sxpcount, timeout)) < 0) return sxp_map_error(errno);
   if (results) *results = result;

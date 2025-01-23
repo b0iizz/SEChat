@@ -1,6 +1,7 @@
 #include "net.h"
 #include "netio.h"
 #include "packet.h"
+#include "socketxp.h"
 
 static struct netio_connection_info {
   connection_t connection;
@@ -76,6 +77,7 @@ netResult netio_connect(const char *hostname, const char *port)
   netio_accepts_sockets = 0;
 
   if ((result = setup_connection(client)) != NET_SUCCESS) goto end_socket;
+
 
   goto end_addrinfo;
 end_socket:
@@ -185,7 +187,7 @@ netResult netio_tick()
 
   if (netio_accepts_sockets && netio_active_count) {
     /*server socket is no longer index 0. an error must have occured*/
-    if (netio_poll_list[idx].events & POLLOUT) return NET_ERROR;
+    if (netio_poll_list[idx].events & SXP_POLLOUT) return NET_ERROR;
     /*an error occured on the server socket*/
     if (netio_poll_list[idx].revents & (POLLHUP | POLLERR | POLLNVAL)) return NET_ERROR;
     /*a new client can be accepted*/
@@ -205,7 +207,7 @@ netResult netio_tick()
   for (; event_count > 0 && idx < netio_active_count;) {
     connection_t conn;
     pollsxp_t *client = &netio_poll_list[idx];
-    if (!(client->revents & (POLLHUP | POLLERR | POLLNVAL | POLLIN | POLLOUT))) {
+    if (!(client->revents & (POLLHUP | POLLERR | POLLNVAL | SXP_POLLIN | SXP_POLLOUT))) {
       idx++;
       continue;
     }
@@ -217,11 +219,11 @@ netResult netio_tick()
       netio_connection_close(conn);
       continue;
     }
-    if (client->revents & POLLIN && (pull_data(&(netio_connections[conn])) == NET_ERROR)) {
+    if ((client->revents & SXP_POLLIN) && (pull_data(&(netio_connections[conn])) == NET_ERROR)) {
       netio_connection_close(conn);
       continue;
     }
-    if (client->revents & POLLOUT && (push_data(&(netio_connections[conn])) == NET_ERROR)) {
+    if ((client->revents & SXP_POLLOUT) && (push_data(&(netio_connections[conn])) == NET_ERROR)) {
       netio_connection_close(conn);
       continue;
     }
@@ -269,7 +271,13 @@ int netio_connection_active(connection_t who)
 
 netResult netio_connection_close(connection_t who)
 {
+  size_t pollidx;
+
   if (!netio_connection_active(who)) return NET_ERROR;
+
+  for (pollidx = 0; pollidx < netio_active_count; pollidx++)
+    if (netio_poll_list[pollidx].fd == netio_connections[who].socket) break;
+  if (pollidx == netio_active_count) return NET_ERROR;
 
   if (sxp_destroy(&netio_connections[who].socket) != SXP_SUCCESS) return NET_ERROR;
   packet_free(&(netio_connections[who].recv_buffer));
@@ -277,11 +285,19 @@ netResult netio_connection_close(connection_t who)
   memset(&netio_connections[who], 0, sizeof(netio_connections[0]));
   netio_connections[who].connection = -1;
 
-  memmove(&netio_poll_list[who], &netio_poll_list[netio_active_count - 1],
-          sizeof(netio_poll_list[0]));
-  netio_poll_list = realloc(netio_poll_list, sizeof(netio_poll_list[0]) * (netio_active_count - 1));
-  if (!netio_poll_list) return NET_ERROR;
-  netio_active_count -= 1;
+  memmove(&netio_poll_list[pollidx], &netio_poll_list[netio_active_count - 1],
+            sizeof(netio_poll_list[0]));
+
+  if ((netio_active_count - 1)) {
+    netio_poll_list =
+        realloc(netio_poll_list, sizeof(netio_poll_list[0]) * (netio_active_count - 1));
+    if (!netio_poll_list) return NET_ERROR;
+    netio_active_count -= 1;
+  } else {
+    free(netio_poll_list);
+    netio_poll_list = NULL;
+    netio_active_count = 0;
+  }
 
   return NET_SUCCESS;
 }
@@ -298,15 +314,16 @@ static netResult setup_connection(sxp_t socket)
 
   netio_poll_list = realloc(netio_poll_list, sizeof(netio_poll_list[0]) * (netio_active_count + 1));
   if (!netio_poll_list) return NET_ERROR;
-  memset(&netio_poll_list[netio_active_count], 0, sizeof(netio_poll_list[0]));
 
   netio_poll_list[netio_active_count].fd = socket;
-  netio_poll_list[netio_active_count].events = POLLIN;
+  netio_poll_list[netio_active_count].events = SXP_POLLIN;
   netio_poll_list[netio_active_count].revents = 0;
 
   /*socket is not the server socket*/
   if (!netio_accepts_sockets || netio_active_count) {
-    netio_poll_list[netio_active_count].events |= POLLOUT;
+    netio_poll_list[netio_active_count].events |= SXP_POLLOUT;
+  } else {
+    netio_poll_list[netio_active_count].events |= POLLIN;
   }
   netio_active_count += 1;
   netio_connection_count += 1;
@@ -320,19 +337,20 @@ static netResult pull_data(struct netio_connection_info *connection)
   size_t num_read;
   sxpResult result;
   char buf[NETIO_READ_MAX];
+
   while ((result = sxp_recv(&(connection->socket), buf, &num_read, NETIO_READ_MAX))
          == SXP_SUCCESS) {
-    if (num_read == 0) return NET_SUCCESS;
+    if (num_read == 0) return NET_ERROR;
     old_capacity = connection->recv_buffer.capacity;
     new_capacity = connection->recv_buffer.capacity + num_read;
-     if (new_capacity > NETIO_BUFFER_MAX_SIZE) {
-       old_capacity -= connection->recv_buffer.size;
-       new_capacity -= connection->recv_buffer.size;
-       memmove(connection->recv_buffer.buffer,
-               connection->recv_buffer.buffer + connection->recv_buffer.size, old_capacity);
-       connection->recv_buffer.size = 0;
-       if (new_capacity > NETIO_BUFFER_MAX_SIZE) return NET_ERROR;
-     }
+    if (new_capacity > NETIO_BUFFER_MAX_SIZE) {
+      old_capacity -= connection->recv_buffer.size;
+      new_capacity -= connection->recv_buffer.size;
+      memmove(connection->recv_buffer.buffer,
+              connection->recv_buffer.buffer + connection->recv_buffer.size, old_capacity);
+      connection->recv_buffer.size = 0;
+      if (new_capacity > NETIO_BUFFER_MAX_SIZE) return NET_ERROR;
+    }
     if (packet_realloc(&(connection->recv_buffer), new_capacity) != PACKET_SUCCESS)
       return NET_ERROR;
     memcpy(connection->recv_buffer.buffer + old_capacity, buf, num_read);
@@ -345,6 +363,7 @@ static netResult push_data(struct netio_connection_info *connection)
 {
   size_t msg_size = connection->send_buffer.size;
   sxpResult result;
+
   while ((result = sxp_send(&(connection->socket), connection->send_buffer.buffer, msg_size))
          == SXP_TOO_BIG) {
     msg_size /= 2;

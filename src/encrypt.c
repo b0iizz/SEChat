@@ -216,6 +216,8 @@ static void *encrypt_vigenere_key_parse(const char *key)
         str_size++;
     }
 
+    if (!str_size) return NULL;
+
     keyptr = malloc((1 + str_size) * sizeof(int));
     if(keyptr == NULL)
         return NULL;

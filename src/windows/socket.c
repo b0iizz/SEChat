@@ -1,6 +1,5 @@
 #include "socketxp.h"
 
-
 static sxpResult sxp_map_error(int error);
 static sxpResult sxp_map_eai_error(int error);
 
@@ -40,7 +39,8 @@ sxpResult sxp_destroy(sxp_t *sock)
   return SXP_SUCCESS;
 }
 
-sxpResult sxp_nbio_set(sxp_t *sock, int nonblockingio) {
+sxpResult sxp_nbio_set(sxp_t *sock, int nonblockingio)
+{
   unsigned long int mode = (nonblockingio == SXP_NONBLOCKING) ? 1 : 0;
   if (!sock) return SXP_ERROR_INVAL;
   if (ioctlsocket(*sock, FIONBIO, &mode)) return sxp_map_error(WSAGetLastError());
@@ -65,9 +65,10 @@ sxpResult sxp_addrinfo_free(addrinfo_t *info)
 /*server-side API*/
 sxpResult sxp_bind(sxp_t *sock, const sockaddr_t *address, size_t addrlen)
 {
-  const char yes = 1;
+  const BOOL yes = 1;
   if (!sock) return SXP_ERROR_INVAL;
-  if (setsockopt(*sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes))) return sxp_map_error(WSAGetLastError());
+  if (setsockopt(*sock, SOL_SOCKET, SO_REUSEADDR, (const char *) &yes, sizeof(yes)))
+    return sxp_map_error(WSAGetLastError());
   if (bind(*sock, address, addrlen)) return sxp_map_error(WSAGetLastError());
   return SXP_SUCCESS;
 }
@@ -88,21 +89,29 @@ sxpResult sxp_accept(sxp_t *sock, sxp_t *newsock)
 }
 
 /*client-side API*/
-sxpResult sxp_connect(sxp_t *sock, sockaddr_t *address, size_t addrlen) {
+sxpResult sxp_connect(sxp_t *sock, sockaddr_t *address, size_t addrlen)
+{
   if (!sock) return SXP_ERROR_INVAL;
   if (connect(*sock, address, addrlen)) return sxp_map_error(WSAGetLastError());
   return SXP_SUCCESS;
-
 }
 
 /*any-side API*/
-sxpResult sxp_send(sxp_t *sock, const char *data, size_t size) {
+sxpResult sxp_send(sxp_t *sock, const char *data, size_t size)
+{
   if (!sock) return SXP_ERROR_INVAL;
-  if (send(*sock, data, size, 0)) return sxp_map_error(WSAGetLastError());
+  while (size) {
+    int sent;
+    if ((sent = send(*sock, data, size, 0)) == SOCKET_ERROR)
+      return sxp_map_error(WSAGetLastError());
+    data += sent;
+    size -= sent;
+  }
   return SXP_SUCCESS;
 }
 
-sxpResult sxp_recv(sxp_t *sock, char *data, size_t *num_read, size_t size) {
+sxpResult sxp_recv(sxp_t *sock, char *data, size_t *num_read, size_t size)
+{
   int read;
   if (!sock || !num_read) return SXP_ERROR_INVAL;
   if ((read = recv(*sock, data, size, 0)) == SOCKET_ERROR) return sxp_map_error(WSAGetLastError());
@@ -110,9 +119,15 @@ sxpResult sxp_recv(sxp_t *sock, char *data, size_t *num_read, size_t size) {
   return SXP_SUCCESS;
 }
 
-sxpResult sxp_poll(size_t /*maybe NULL*/ *results, pollsxp_t sxps[], size_t sxpcount, int timeout) {
-  int res = WSAPoll(sxps, sxpcount, timeout);
-  if (res == SOCKET_ERROR) return sxp_map_error(WSAGetLastError());
+sxpResult sxp_poll(size_t /*maybe NULL*/ *results, pollsxp_t sxps[], size_t sxpcount, int timeout)
+{
+  int res;
+  if (!sxpcount) return SXP_TRY_AGAIN;
+  if (!sxps) return SXP_ERROR_INVAL;
+  res = WSAPoll(sxps, sxpcount, timeout);
+  if (res == SOCKET_ERROR) {
+    return sxp_map_error(WSAGetLastError());
+  }
   if (results) *results = res;
   return res > 0 ? SXP_SUCCESS : SXP_TRY_AGAIN;
 }
@@ -136,6 +151,14 @@ static sxpResult sxp_map_eai_error(int error)
 
 static sxpResult sxp_map_error(int error)
 {
+  /*{
+    char *str;
+    FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM
+                      | FORMAT_MESSAGE_IGNORE_INSERTS,
+                  NULL, error, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR) &str, 0, NULL);
+    interface_message_send(str);
+    LocalFree(str);
+  }*/
   switch (error) {
     case WSAENOPROTOOPT:
     case WSAEISCONN:

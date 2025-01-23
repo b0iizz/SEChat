@@ -1,7 +1,6 @@
 #ifndef NETIO_H_
 #define NETIO_H_
 
-#include "socketxp.h"
 #include "packet.h"
 
 #define NETIO_READ_MAX (16*1024)

@@ -31,13 +31,13 @@ parseResult packet_recv_i32(net_buffer_t *pak, long int *res)
 
 parseResult packet_recv_u32(net_buffer_t *pak, unsigned long *res)
 {
-  if (pak->size + sizeof(unsigned long) > pak->capacity) return PACKET_NOT_READY;
+  if (pak->size + 4 > pak->capacity) return PACKET_NOT_READY;
   *res = 0;
   *res |= ((unsigned char) pak->buffer[pak->size + 0]) << 24;
   *res |= ((unsigned char) pak->buffer[pak->size + 1]) << 16;
   *res |= ((unsigned char) pak->buffer[pak->size + 2]) << 8;
   *res |= ((unsigned char) pak->buffer[pak->size + 3]) << 0;
-  pak->size += sizeof(unsigned long);
+  pak->size += 4;
   return PACKET_SUCCESS;
 }
 
@@ -47,14 +47,14 @@ parseResult packet_send_i32(net_buffer_t *pak, long int n) { return packet_send_
 parseResult packet_send_u32(net_buffer_t *pak, unsigned long n)
 {
   parseResult parsed;
-  if ((pak->size + sizeof(unsigned long) > pak->capacity)
-      && (parsed = packet_realloc(pak, pak->capacity + sizeof(unsigned long))) != PACKET_SUCCESS)
+  if ((pak->size + 4 > pak->capacity)
+      && (parsed = packet_realloc(pak, pak->size + 4)) != PACKET_SUCCESS)
     return parsed;
   pak->buffer[pak->size + 0] = (unsigned char) ((n >> 24) & 0xFF);
   pak->buffer[pak->size + 1] = (unsigned char) ((n >> 16) & 0xFF);
   pak->buffer[pak->size + 2] = (unsigned char) ((n >> 8) & 0xFF);
   pak->buffer[pak->size + 3] = (unsigned char) ((n >> 0) & 0xFF);
-  pak->size += sizeof(unsigned long);
+  pak->size += 4;
   return PACKET_SUCCESS;
 }
 
@@ -90,7 +90,7 @@ static parseResult packet_recv_buf(net_buffer_t *pak, char **buf, unsigned long 
   parseResult parsed;
   if ((parsed = packet_recv_i32(pak, &length)) != PACKET_SUCCESS) return parsed;
   if (length < 0 || (pak->size + length > pak->capacity)) {
-    pak->size -= sizeof(unsigned long);
+    pak->size -= 4;
     return PACKET_NOT_READY;
   }
   *buf = malloc(length);
@@ -108,7 +108,7 @@ static parseResult packet_send_buf(net_buffer_t *pak, const char *buf, unsigned 
   if (size >= (size_t) LONG_MAX) return PACKET_ERROR;
   if ((parsed = packet_send_i32(pak, size)) != PACKET_SUCCESS) return parsed;
   if ((pak->size + size > pak->capacity)
-      && (parsed = packet_realloc(pak, pak->capacity + size)) != PACKET_SUCCESS)
+      && (parsed = packet_realloc(pak, pak->size + size)) != PACKET_SUCCESS)
     return parsed;
   memcpy(pak->buffer + pak->size, buf, size);
   pak->size += size;
