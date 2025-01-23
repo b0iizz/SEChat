@@ -1,6 +1,7 @@
 #include "encrypt.h"
 #include <ctype.h>
 #include <stdlib.h>
+#include <string.h>
 
 encryptor_t encryptors[ENCRYPT_MAX_VAL] = { 0 };
 
@@ -36,6 +37,8 @@ static void encrypt_substitution_encode(char **str, void *key, void *state);
 static void encrypt_substitution_decode(char **code, void *key, void *state);
 
 static void *encrypt_pairwise_substitution_key_parse(const char *key);
+
+static void *encrypt_enigma_single_rotor_key_parse(const char *key);
 
 void encrypt_init()
 {
@@ -94,6 +97,13 @@ void encrypt_init()
     encryptors[ENCRYPT_PAIRWISE_SUBSTITUTION].state_free = &encrypt_none_state_free;
     encryptors[ENCRYPT_PAIRWISE_SUBSTITUTION].encode = &encrypt_substitution_encode;
     encryptors[ENCRYPT_PAIRWISE_SUBSTITUTION].decode = &encrypt_substitution_decode;
+
+    encryptors[ENCRYPT_ENIGMA_SINGLE_ROTOR].key_parse = &encrypt_enigma_single_rotor_key_parse;
+    encryptors[ENCRYPT_ENIGMA_SINGLE_ROTOR].key_free = &encrypt_substitution_key_free;
+    encryptors[ENCRYPT_ENIGMA_SINGLE_ROTOR].state_alloc = &encrypt_none_state_alloc;
+    encryptors[ENCRYPT_ENIGMA_SINGLE_ROTOR].state_free = &encrypt_none_state_free;
+    encryptors[ENCRYPT_ENIGMA_SINGLE_ROTOR].encode = &encrypt_substitution_encode;
+    encryptors[ENCRYPT_ENIGMA_SINGLE_ROTOR].decode = &encrypt_substitution_decode;
 }
 
 static int roll_in_alphabet(int i, int shift, int alphabet_size)
@@ -428,4 +438,33 @@ static void *encrypt_pairwise_substitution_key_parse(const char *key)
     }
 
     return (void *)keyptr;
+}
+
+static void *encrypt_enigma_single_rotor_key_parse(const char *key)
+{
+    if(key == NULL)
+        return NULL;
+
+    if(0 == strcmp(key,"B"))
+        return encrypt_pairwise_substitution_key_parse("yruhqsldpxngokmiebfzcwvjat");
+
+    if(0 == strcmp(key,"C"))
+        return encrypt_pairwise_substitution_key_parse("fvpjiaoyedrzxwgctkuqsbnmhl");
+
+    if(0 == strcmp(key,"I"))
+        return encrypt_substitution_key_parse("ekmflgdqvzntowyhxuspaibrcj");
+
+    if(0 == strcmp(key,"II"))
+        return encrypt_substitution_key_parse("ajdksiruxblhwtmcqgznpyfvoe");
+
+    if(0 == strcmp(key,"III"))
+        return encrypt_substitution_key_parse("bdfhjlcprtxvznyeiwgakmusqo");
+
+    if(0 == strcmp(key,"IV"))
+        return encrypt_substitution_key_parse("esovpzjayquirhxlnftgkdcmwb");
+
+    if(0 == strcmp(key,"V"))
+        return encrypt_substitution_key_parse("vzbrgityupsdnhlxawmjqofeck");
+
+    return NULL;
 }
