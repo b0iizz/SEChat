@@ -78,6 +78,32 @@ void encrypt_init()
     encryptors[ENCRYPT_PAIRWISE_SUBSTITUTION].decode = &encrypt_substitution_decode;
 }
 
+const char *encrypt_strencryptor(int encryptor) {
+  switch (encryptor) {
+   case ENCRYPT_NONE: return "No Encryption (none)";
+   case ENCRYPT_CAESAR: return "Caesar Chiffre (caesar)";
+   case ENCRYPT_VIGENERE: return "Vigenere Chiffre (vigenere)";
+   case ENCRYPT_ROT13: return "Rot13 Method (rot13)";
+   case ENCRYPT_ROT47: return "Rot47 Method (rot47)";
+   case ENCRYPT_ATBASH: return "Atbash Encryption (atbash)";
+   case ENCRYPT_SUBSTITUTION: return "Substitution (substitution)";
+   case ENCRYPT_PAIRWISE_SUBSTITUTION: return "Pairwise Substitution (pair-substitution)";
+   default: return "Invalid Method!";
+  }
+}
+
+int encrypt_fencryptor(const char *str) {
+  if (!strcmp(str, "none")) return ENCRYPT_NONE;
+  if (!strcmp(str, "caesar")) return ENCRYPT_CAESAR;
+  if (!strcmp(str, "vigenere")) return ENCRYPT_VIGENERE;
+  if (!strcmp(str, "rot13")) return ENCRYPT_ROT13;
+  if (!strcmp(str, "rot47")) return ENCRYPT_ROT47;
+  if (!strcmp(str, "atbash")) return ENCRYPT_ATBASH;
+  if (!strcmp(str, "substitution")) return ENCRYPT_SUBSTITUTION;
+  if (!strcmp(str, "pair-substitution")) return ENCRYPT_PAIRWISE_SUBSTITUTION;
+  return -1;
+}
+
 static int roll_in_alphabet(int i, int shift, int alphabet_size)
 {
     if(i < 0)

@@ -17,4 +17,7 @@ extern encryptor_t encryptors[ENCRYPT_MAX_VAL];
 
 void encrypt_init();
 
+const char *encrypt_strencryptor(int encryptor);
+int encrypt_fencryptor(const char *str);
+
 #endif

@@ -6,11 +6,10 @@
 #include <string.h>
 
 static int handle_arguments(int argc, char **argv);
-static int parse_encryption(const char *encryptor);
 static void display_help(char **argv);
 static void command_connect(char **argv);
 static void command_serve(char **argv);
-static void command_key(char **argv);
+static void command_key(char **argv, int *self_encryption);
 static void command_encrypt(char **argv, int *encryption);
 static void command_name(char **argv);
 static int handle_command(const char *message, int *loop, int *encryption);
@@ -131,7 +130,7 @@ static int handle_command(const char *message, int *loop, int *encryption)
   } else if (!strcmp(argv[0], "serve") || !strcmp(argv[0], "s")) {
     command_serve(argv);
   } else if (!strcmp(argv[0], "key") || !strcmp(argv[0], "k")) {
-    command_key(argv);
+    command_key(argv, encryption);
   } else if (!strcmp(argv[0], "name") || !strcmp(argv[0], "n")) {
     command_name(argv);
   } else if (!strcmp(argv[0], "encrypt") || !strcmp(argv[0], "e")) {
@@ -140,18 +139,6 @@ static int handle_command(const char *message, int *loop, int *encryption)
   free(argv);
   free(copy);
   return 1;
-}
-
-static int parse_encryption(const char *encryptor)
-{
-  if (!strcmp(encryptor, "caesar")) return ENCRYPT_CAESAR;
-  if (!strcmp(encryptor, "vigenere")) return ENCRYPT_VIGENERE;
-  if (!strcmp(encryptor, "rot13")) return ENCRYPT_ROT13;
-  if (!strcmp(encryptor, "rot47")) return ENCRYPT_ROT47;
-  if (!strcmp(encryptor, "atbash")) return ENCRYPT_ATBASH;
-  if (!strcmp(encryptor, "substitution")) return ENCRYPT_SUBSTITUTION;
-  if (!strcmp(encryptor, "pair-substitution")) return ENCRYPT_PAIRWISE_SUBSTITUTION;
-  return ENCRYPT_NONE;
 }
 
 static void display_help(char **argv)
@@ -176,9 +163,6 @@ static void display_help(char **argv)
           "!key [key=###] [encrypt=###] [name=###]\n"
           "Set key[key] of method[encrypt] on person[name]\n"
           "Defaults:\n"
-          "  key="
-          "\n"
-          "  encrypt=none\n"
           "  name=(you)");
     } else if (!strcmp(argv[idx], "name")) {
       interface_message_send(
@@ -187,20 +171,14 @@ static void display_help(char **argv)
           "Defaults:\n"
           "  name=(empty string)");
     } else if (!strcmp(argv[idx], "encrypt")) {
+      int i;
       interface_message_send(
           "!encrypt [encrypt=###]\n"
           "Set your own encryption\n"
-          "Defaults:\n"
-          "  encrypt=none\n"
-          "Possible values:\n"
-          "  none\n"
-          "  caesar\n"
-          "  vigenere\n"
-          "  rot13\n"
-          "  rot47\n"
-          "  atbash\n"
-          "  substitution\n"
-          "  pair-substitution");
+          "Possible methods:\n\n");
+      for (i = 0; i < ENCRYPT_MAX_VAL; i++) {
+         interface_message_send(encrypt_strencryptor(i));
+      }
     }
   }
   if (!(idx - 1))
@@ -254,31 +232,42 @@ static void command_serve(char **argv)
 static void command_encrypt(char **argv, int *encryption)
 {
   int idx;
+  int encryptor = -1;
   for (idx = 1; argv[idx]; idx++) {
     if (util_startswith(argv[idx], "encrypt=")) {
       const char *encrypt_name = argv[idx] + strlen("encrypt=");
-      *encryption = parse_encryption(encrypt_name);
+      encryptor = encrypt_fencryptor(encrypt_name);
     }
   }
+  if (encryptor < 0) {
+    interface_message_send("unknown encyption method!");
+    return;
+  }
+  *encryption = encryptor;
 }
 
 static void command_name(char **argv)
 {
   int idx;
-  const char *name = "";
+  const char *name = NULL;
   for (idx = 1; argv[idx]; idx++) {
     if (util_startswith(argv[idx], "name=")) { name = argv[idx] + strlen("name="); }
+  }
+  if (!name) {
+    interface_message_send("no name was specified!");
+    return;
   }
   net_name_set(NET_MYSELF, name);
 }
 
-static void command_key(char **argv)
+static void command_key(char **argv, int *self_encryption)
 {
   unsigned int idx;
   const char *name = NULL;
-  int encryption = ENCRYPT_NONE;
   const char *key = NULL;
+  const char *encrypt = NULL;
   long int person = NET_MYSELF;
+  int encryption = ENCRYPT_NONE;
 
   struct net_message buffer[80];
   size_t num_msgs = 0;
@@ -286,9 +275,7 @@ static void command_key(char **argv)
   for (idx = 1; argv[idx]; idx++) {
     if (util_startswith(argv[idx], "name=")) { name = argv[idx] + strlen("name="); }
     if (util_startswith(argv[idx], "key=")) { key = argv[idx] + strlen("key="); }
-    if (util_startswith(argv[idx], "encrypt=")) {
-      encryption = parse_encryption(argv[idx] + strlen("encrypt="));
-    }
+    if (util_startswith(argv[idx], "encrypt=")) { encrypt = argv[idx] + strlen("encrypt="); }
   }
 
   if (name) {
@@ -314,6 +301,14 @@ static void command_key(char **argv)
     }
   }
 
+  if (encrypt) {
+    encryption = encrypt_fencryptor(encrypt);
+  } else if (person == NET_MYSELF) {
+    encryption = *self_encryption;
+  } else {
+    interface_message_send("No encryption method specified!");
+  }
+
   if (key) {
     net_key_set(person, encryption, key);
     interface_message_clear();
@@ -334,7 +329,8 @@ static int handle_net_message(struct net_message *buffer)
   char tmp_buf[128];
   char *name;
   if (net_name_get(buffer->person_id, &name) != NET_SUCCESS) { name = NULL; }
-  sprintf(tmp_buf, "%.80s said (with index %li):", name ? name : "Unknown User", buffer->index);
+  sprintf(tmp_buf, "%.80s said (encrypted with: %s):", name ? name : "Unknown User",
+          encrypt_strencryptor(buffer->encryption));
   interface_message_send(tmp_buf);
   interface_message_send(buffer->message);
 
