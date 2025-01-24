@@ -87,6 +87,7 @@ netResult net_reset()
   free(messages);
   messages = NULL;
   messages_count = 0;
+  message_last_seen = -1;
 
   for (i = 0; i < ENCRYPT_MAX_VAL; i++) {
     for (j = 0; j < person_count; j++)
@@ -234,7 +235,7 @@ netResult net_key_set(int person, int method, const char *key)
   if (result == NET_SUCCESS) {
     person_encrypt_key[method][person] = encryptors[method].key_parse(key);
     if (!person_encrypt_key[method][person]) {
-      free(&person_encrypt_plain[method][person]);
+      free(person_encrypt_plain[method][person]);
       person_encrypt_plain[method][person] = NULL;
     }
   }
@@ -377,7 +378,9 @@ static int person_exists(int who)
 
 static netResult person_make(int who)
 {
+  int i;
   netResult result;
+
   if (is_server < 0) return NET_ERROR;
   if (who < 0) return NET_ERROR;
   if (person_exists(who)) return NET_ERROR;
@@ -404,11 +407,10 @@ static netResult person_make(int who)
   }
 
 
-  result = util_strcpy(&person_name[who], "", NET_SUCCESS, NET_ERROR);
-  if (result == NET_SUCCESS) {
-    result = util_strcpy(&person_encrypt_plain[ENCRYPT_NONE][who], "", NET_SUCCESS, NET_ERROR);
-    person_encrypt_key[ENCRYPT_NONE][who] = encryptors[ENCRYPT_NONE].key_parse("");
-  }
+  result = util_strcpy(&person_name[who], "(anon)", NET_SUCCESS, NET_ERROR);
+
+  if (result == NET_SUCCESS)
+    for (i = 0; i < ENCRYPT_MAX_VAL; i++) { net_key_set(who, i, ""); }
 
   return result;
 }
