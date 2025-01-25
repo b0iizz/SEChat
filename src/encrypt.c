@@ -2,6 +2,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 encryptor_t encryptors[ENCRYPT_MAX_VAL] = { 0 };
 
@@ -41,7 +42,15 @@ static void encrypt_substitution_decode(char **code, void *key, void *state);
 
 static void *encrypt_pairwise_substitution_key_parse(const char *key);
 
+enigma_rotor *enigma_rotor_init(const char *name);
 static void *encrypt_enigma_single_rotor_key_parse(const char *key);
+static void encrypt_enigma_single_rotor_key_free(void *key);
+static void encrypt_enigma_single_rotor_encode(char **str, void *key, void *state);
+static void encrypt_enigma_single_rotor_decode(char **code, void *key, void *state);
+
+static void *encrypt_enigma_key_parse(const char *key);
+static void encrypt_enigma_key_free(void *key);
+static void encrypt_enigma_encode(char **str, void *key, void *state);
 
 void encrypt_init()
 {
@@ -109,11 +118,18 @@ void encrypt_init()
     encryptors[ENCRYPT_PAIRWISE_SUBSTITUTION].decode = &encrypt_substitution_decode;
 
     encryptors[ENCRYPT_ENIGMA_SINGLE_ROTOR].key_parse = &encrypt_enigma_single_rotor_key_parse;
-    encryptors[ENCRYPT_ENIGMA_SINGLE_ROTOR].key_free = &encrypt_substitution_key_free;
+    encryptors[ENCRYPT_ENIGMA_SINGLE_ROTOR].key_free = &encrypt_enigma_single_rotor_key_free;
     encryptors[ENCRYPT_ENIGMA_SINGLE_ROTOR].state_alloc = &encrypt_none_state_alloc;
     encryptors[ENCRYPT_ENIGMA_SINGLE_ROTOR].state_free = &encrypt_none_state_free;
-    encryptors[ENCRYPT_ENIGMA_SINGLE_ROTOR].encode = &encrypt_substitution_encode;
-    encryptors[ENCRYPT_ENIGMA_SINGLE_ROTOR].decode = &encrypt_substitution_decode;
+    encryptors[ENCRYPT_ENIGMA_SINGLE_ROTOR].encode = &encrypt_enigma_single_rotor_encode;
+    encryptors[ENCRYPT_ENIGMA_SINGLE_ROTOR].decode = &encrypt_enigma_single_rotor_decode;
+
+    encryptors[ENCRYPT_ENIGMA].key_parse = &encrypt_enigma_key_parse;
+    encryptors[ENCRYPT_ENIGMA].key_free = &encrypt_enigma_key_free;
+    encryptors[ENCRYPT_ENIGMA].state_alloc = &encrypt_none_state_alloc;
+    encryptors[ENCRYPT_ENIGMA].state_free = &encrypt_none_state_free;
+    encryptors[ENCRYPT_ENIGMA].encode = &encrypt_enigma_encode;
+    encryptors[ENCRYPT_ENIGMA].decode = &encrypt_enigma_encode;
 }
 
 static int roll_in_alphabet(int i, int shift, int alphabet_size)
@@ -520,31 +536,254 @@ static void *encrypt_pairwise_substitution_key_parse(const char *key)
     return (void *)keyptr;
 }
 
+/*single-Rotor-Enigma*/
+
+enigma_rotor *enigma_rotor_init(const char *name)
+{
+    enigma_rotor *e_rotor_ptr;
+    if(name == NULL)
+        return NULL;
+    e_rotor_ptr = malloc(sizeof(enigma_rotor));
+
+    if(e_rotor_ptr == NULL)
+        return NULL;
+    e_rotor_ptr->key = NULL;
+
+    if(0 == strcmp(name,"B")){
+        e_rotor_ptr->key = encrypt_pairwise_substitution_key_parse("yruhqsldpxngokmiebfzcwvjat");
+        e_rotor_ptr->turnover_marker = ' ';
+    }
+    if(0 == strcmp(name,"C")){
+        e_rotor_ptr->key = encrypt_pairwise_substitution_key_parse("fvpjiaoyedrzxwgctkuqsbnmhl");
+        e_rotor_ptr->turnover_marker = ' ';
+    }
+    if(0 == strcmp(name,"I")){
+        e_rotor_ptr->key = encrypt_substitution_key_parse("ekmflgdqvzntowyhxuspaibrcj");
+        e_rotor_ptr->turnover_marker = 'q';
+    }
+    if(0 == strcmp(name,"II")){
+        e_rotor_ptr->key = encrypt_substitution_key_parse("ajdksiruxblhwtmcqgznpyfvoe");
+        e_rotor_ptr->turnover_marker = 'e';
+    }
+    if(0 == strcmp(name,"III")){
+        e_rotor_ptr->key = encrypt_substitution_key_parse("bdfhjlcprtxvznyeiwgakmusqo");
+        e_rotor_ptr->turnover_marker = 'v';
+    }
+    if(0 == strcmp(name,"IV")){
+        e_rotor_ptr->key = encrypt_substitution_key_parse("esovpzjayquirhxlnftgkdcmwb");
+        e_rotor_ptr->turnover_marker = 'j';
+    }
+    if(0 == strcmp(name,"V")){
+        e_rotor_ptr->key = encrypt_substitution_key_parse("vzbrgityupsdnhlxawmjqofeck");
+        e_rotor_ptr->turnover_marker = 'z';
+    }
+    if(e_rotor_ptr->key == NULL){
+        free(e_rotor_ptr);
+        return NULL;
+    }
+    return e_rotor_ptr;
+}
+
 static void *encrypt_enigma_single_rotor_key_parse(const char *key)
 {
+    return (void *) enigma_rotor_init(key);
+}
+static void encrypt_enigma_single_rotor_key_free(void *key)
+{
+    enigma_rotor *e_rotor_ptr = (enigma_rotor *)key;
     if(key == NULL)
+        return;
+    if(e_rotor_ptr->key != NULL)
+        free(e_rotor_ptr->key);
+
+    free(e_rotor_ptr);
+}
+static void encrypt_enigma_single_rotor_encode(char **str, void *key, void *state)
+{
+    enigma_rotor *e_rotor_ptr = (enigma_rotor *)key;
+    if(key == NULL)
+        return;
+    encrypt_substitution_encode(str, e_rotor_ptr->key, state);
+}
+static void encrypt_enigma_single_rotor_decode(char **code, void *key, void *state)
+{
+    enigma_rotor *e_rotor_ptr = (enigma_rotor *)key;
+    if(key == NULL)
+        return;
+    encrypt_substitution_decode(code, e_rotor_ptr->key, state);
+}
+
+/*Enigma (multiple rotors)*/
+
+static void *encrypt_enigma_key_parse(const char *key)
+{
+    int i;
+    char *textpart;
+    enigma *e_ptr = calloc(1, sizeof(enigma));
+    char *key_cpy;
+    if(e_ptr == NULL)
         return NULL;
 
-    if(0 == strcmp(key,"B"))
-        return encrypt_pairwise_substitution_key_parse("yruhqsldpxngokmiebfzcwvjat");
+    e_ptr->plugboard_key = NULL;
+    e_ptr->rotor_left = NULL;
+    e_ptr->rotor_middle = NULL;
+    e_ptr->rotor_right = NULL;
 
-    if(0 == strcmp(key,"C"))
-        return encrypt_pairwise_substitution_key_parse("fvpjiaoyedrzxwgctkuqsbnmhl");
+    key_cpy = malloc((strlen(key) + 1) *sizeof(char));
+    if(key_cpy == NULL)
+        return NULL;
 
-    if(0 == strcmp(key,"I"))
-        return encrypt_substitution_key_parse("ekmflgdqvzntowyhxuspaibrcj");
+    strcpy(key_cpy, key);
 
-    if(0 == strcmp(key,"II"))
-        return encrypt_substitution_key_parse("ajdksiruxblhwtmcqgznpyfvoe");
+    textpart = strtok(key_cpy, ";");
+    if(textpart == NULL){
+        encrypt_enigma_key_free(&e_ptr);
+        return NULL;
+    }
+    e_ptr->rotor_left = enigma_rotor_init(textpart);
 
-    if(0 == strcmp(key,"III"))
-        return encrypt_substitution_key_parse("bdfhjlcprtxvznyeiwgakmusqo");
+    textpart = strtok(NULL, ";");
+    if(textpart == NULL){
+        encrypt_enigma_key_free(&e_ptr);
+        return NULL;
+    }
+    e_ptr->rotor_middle = enigma_rotor_init(textpart);
 
-    if(0 == strcmp(key,"IV"))
-        return encrypt_substitution_key_parse("esovpzjayquirhxlnftgkdcmwb");
+    textpart = strtok(NULL, ";");
+    if(textpart == NULL){
+        encrypt_enigma_key_free(&e_ptr);
+        return NULL;
+    }
+    e_ptr->rotor_right = enigma_rotor_init(textpart);
+    textpart = strtok(NULL, ";");
+    if(textpart == NULL){
+        encrypt_enigma_key_free(&e_ptr);
+        return NULL;
+    }
+    e_ptr->reflector = enigma_rotor_init(textpart);
+    /*printf("%p", e_ptr->reflector);*/
+    if(e_ptr->reflector == NULL || e_ptr->rotor_left == NULL || e_ptr->rotor_middle == NULL || e_ptr->rotor_right == NULL){
+        encrypt_enigma_key_free(&e_ptr);
+        return NULL;
+    }
 
-    if(0 == strcmp(key,"V"))
-        return encrypt_substitution_key_parse("vzbrgityupsdnhlxawmjqofeck");
+    textpart = strtok(NULL, ";");
 
-    return NULL;
+    if(strlen(textpart) != 3){
+        encrypt_enigma_key_free(&e_ptr);
+        return NULL;
+    }
+
+    for (i = 0; i < 3; i++)
+    {
+        if(!isalpha(textpart[i])){
+            encrypt_enigma_key_free(&e_ptr);
+            return NULL;
+        }
+        e_ptr->starting_position[i] = tolower(textpart[i]) - 'a';
+    }
+
+    textpart = strtok(NULL, ";");
+    if(textpart == NULL)
+        e_ptr->plugboard_key = NULL;
+    else
+        e_ptr->plugboard_key = encrypt_pairwise_substitution_key_parse(textpart);
+
+    free(key_cpy);
+    return e_ptr;
+}
+static void encrypt_enigma_key_free(void *key)
+{
+    enigma *e_ptr = (enigma *)key;
+    if(key == NULL)
+        return;
+
+    if(e_ptr->reflector != NULL)
+        free(e_ptr->reflector);
+    if(e_ptr->rotor_left != NULL)
+        free(e_ptr->rotor_left);
+    if(e_ptr->rotor_middle != NULL)
+        free(e_ptr->rotor_middle);
+    if(e_ptr->rotor_right != NULL)
+        free(e_ptr->rotor_right);
+    if(e_ptr->plugboard_key != NULL)
+        free(e_ptr->plugboard_key);
+
+    free(key);
+}
+static void encrypt_enigma_encode(char **text, void *key, void *state)
+{
+    int i, cap;
+    char *str = *text;
+    enigma *e_ptr = (enigma *)key;
+    char *let;
+    char **passon_str;
+    int rotorshift[3]; /*left - middle - right*/
+    let = malloc(2 * sizeof(char));
+    let[1] = '\0';
+    if(let == NULL)
+        return;
+
+    for (i = 0; i < 3; i++)
+        rotorshift[i] = e_ptr->starting_position[i];
+
+    for (i = 0; str[i] != '\0'; i++)
+    {
+        if(!isalpha(str[i]))
+            continue;
+        cap = isupper(str[i]);
+        let[0] = tolower(str[i]);
+
+        /*step rotors*/
+        if (rotorshift[1] + 'a' == e_ptr->rotor_middle->turnover_marker) {
+            rotorshift[0] = roll_in_alphabet(rotorshift[0], 1, 26);
+            rotorshift[1] = roll_in_alphabet(rotorshift[1], 1, 26);
+            rotorshift[2] = roll_in_alphabet(rotorshift[2], 1, 26);
+        } else if (rotorshift[2] + 'a' == e_ptr->rotor_right->turnover_marker) {
+            rotorshift[1] = roll_in_alphabet(rotorshift[1], 1, 26);
+            rotorshift[2] = roll_in_alphabet(rotorshift[2], 1, 26);
+        } else {
+            rotorshift[2] = roll_in_alphabet(rotorshift[2], 1, 26);
+        }
+
+        passon_str = &let;
+        /*encrypt*/
+        if(e_ptr->plugboard_key != NULL)
+            encrypt_substitution_encode(passon_str, (void *)(e_ptr->plugboard_key), state);
+
+        let[0] = 'a' + roll_in_alphabet(let[0]-'a', rotorshift[2], 26);
+        encrypt_enigma_single_rotor_encode(passon_str, e_ptr->rotor_right, state);
+
+        let[0] = 'a' + roll_in_alphabet(let[0]-'a', rotorshift[1] - rotorshift[2], 26);
+        encrypt_enigma_single_rotor_encode(passon_str, e_ptr->rotor_middle, state);
+
+        let[0] = 'a' + roll_in_alphabet(let[0]-'a', rotorshift[0] - rotorshift[1], 26);
+        encrypt_enigma_single_rotor_encode(passon_str, e_ptr->rotor_left, state);
+        let[0] = 'a' + roll_in_alphabet(let[0]-'a', - rotorshift[0], 26);
+
+
+        /*printf("%p", e_ptr->reflector);*/
+        /*reflector*/
+        encrypt_substitution_encode(passon_str, e_ptr->reflector->key, state);
+
+
+        let[0] = 'a' + roll_in_alphabet(let[0]-'a', rotorshift[0], 26);
+        encrypt_enigma_single_rotor_decode(passon_str, e_ptr->rotor_left, state);
+        let[0] = 'a' + roll_in_alphabet(let[0]-'a', rotorshift[1] - rotorshift[0], 26);
+
+        encrypt_enigma_single_rotor_decode(passon_str, e_ptr->rotor_middle, state);
+        let[0] = 'a' + roll_in_alphabet(let[0]-'a', rotorshift[2] - rotorshift[1], 26);
+
+        encrypt_enigma_single_rotor_decode(passon_str, e_ptr->rotor_right, state);
+        let[0] = 'a' + roll_in_alphabet(let[0]-'a', - rotorshift[2], 26);
+
+        if(e_ptr->plugboard_key != NULL)
+            encrypt_substitution_decode(passon_str, e_ptr->plugboard_key, state);
+
+       str[i] = let[0];
+       if(cap)
+            str[i] = str[i] - 'a' + 'A';
+    }
+    free(let);
+    (void)state;
 }
