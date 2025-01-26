@@ -35,6 +35,8 @@ netResult net_key_get(int person, int method, char **dst);
 netResult net_message_send(int encryption, const char *message);
 netResult net_message_recv(struct net_message *buffer, size_t *count, size_t limit, int flags);
 
+netResult net_messages_decoding_set(int enabled);
+
 netResult net_person_count(size_t *list);
 netResult net_person_list(int list[], size_t limit);
 

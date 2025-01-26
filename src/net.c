@@ -9,6 +9,7 @@ static long int self_person_id = -1;
 static struct net_message *messages = NULL;
 static size_t messages_count = 0;
 static size_t message_last_seen = -1;
+static int messages_should_decode = 1;
 
 static char **person_name = NULL;
 static size_t person_count = 0;
@@ -88,6 +89,7 @@ netResult net_reset()
   messages = NULL;
   messages_count = 0;
   message_last_seen = -1;
+  messages_should_decode = 1;
 
   for (i = 0; i < ENCRYPT_MAX_VAL; i++) {
     for (j = 0; j < person_count; j++)
@@ -331,7 +333,7 @@ netResult net_message_recv(struct net_message *buffer, size_t *count, size_t lim
     result = util_strcpy(&buffer[idx].message, messages[read_start + idx].message, NET_SUCCESS,
                          NET_ERROR);
 
-    if (person_exists(buffer[idx].person_id)
+    if (messages_should_decode && person_exists(buffer[idx].person_id)
         && person_encrypt_plain[buffer[idx].encryption][buffer[idx].person_id]) {
       encryptors[buffer[idx].encryption].decode(
           &buffer[idx].message, person_encrypt_key[buffer[idx].encryption][buffer[idx].person_id]);
@@ -339,6 +341,12 @@ netResult net_message_recv(struct net_message *buffer, size_t *count, size_t lim
   }
   *count = idx;
   return result;
+}
+
+netResult net_messages_decoding_set(int enabled) {
+  if (is_server < 0) return NET_ERROR;
+  messages_should_decode = enabled != 0;
+  return NET_SUCCESS;
 }
 
 netResult net_person_count(size_t *list)

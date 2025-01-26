@@ -12,6 +12,7 @@ static void command_serve(char **argv);
 static void command_key(char **argv, int *self_encryption);
 static void command_encrypt(char **argv, int *encryption);
 static void command_name(char **argv);
+static void command_decode(char **argv);
 static int handle_command(const char *message, int *loop, int *encryption);
 static int handle_net_message(struct net_message *buffer);
 
@@ -135,6 +136,8 @@ static int handle_command(const char *message, int *loop, int *encryption)
     command_name(argv);
   } else if (!strcmp(argv[0], "encrypt") || !strcmp(argv[0], "e")) {
     command_encrypt(argv, encryption);
+  } else if (!strcmp(argv[0], "decode") || !strcmp(argv[0], "dc")) {
+    command_decode(argv);
   }
   free(argv);
   free(copy);
@@ -176,9 +179,11 @@ static void display_help(char **argv)
           "!encrypt [encrypt=###]\n"
           "Set your own encryption\n"
           "Possible methods:\n\n");
-      for (i = 0; i < ENCRYPT_MAX_VAL; i++) {
-         interface_message_send(encrypt_strencryptor(i));
-      }
+      for (i = 0; i < ENCRYPT_MAX_VAL; i++) { interface_message_send(encrypt_strencryptor(i)); }
+    } else if (!strcmp(argv[idx], "decode")) {
+      interface_message_send(
+          "!decode [enable=###]\n"
+          "Enable (on) or disable (off) decoding of messages.");
     }
   }
   if (!(idx - 1))
@@ -194,7 +199,8 @@ static void display_help(char **argv)
         "!serve :        Serve clients\n"
         "!key     - !k:  Set key of person\n"
         "!name    - !n:  Set own name\n"
-        "!encrypt - !e:  Set own encryption method");
+        "!encrypt - !e:  Set own encryption method\n"
+        "!decode  - !dc: Enable or disable decoding of messages.");
 }
 
 static void command_connect(char **argv)
@@ -321,6 +327,30 @@ static void command_key(char **argv, int *self_encryption)
       interface_message_send(str);
       free(str);
     }
+  }
+}
+
+static void command_decode(char **argv)
+{
+  const char *enabled = NULL;
+
+  size_t idx;
+  struct net_message buffer[80];
+  size_t num_msgs = 0;
+
+  for (idx = 1; argv[idx]; idx++) {
+    if (util_startswith(argv[idx], "enable=")) { enabled = argv[idx] + strlen("enable="); }
+  }
+
+  if (!enabled || (strcmp(enabled, "on") && strcmp(enabled, "off"))) {
+    interface_message_send("please specifiy either enabled=on or off!");
+    return;
+  }
+
+  if (net_messages_decoding_set(!strcmp(enabled, "on")) == NET_SUCCESS) {
+    interface_message_clear();
+    net_message_recv(buffer, &num_msgs, 80, NET_FHISTORY);
+    for (idx = 0; idx < num_msgs; idx++) { handle_net_message(buffer + idx); }
   }
 }
 
