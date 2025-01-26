@@ -6,26 +6,27 @@
 
 encryptor_t encryptors[ENCRYPT_MAX_VAL] = { 0 };
 
+static int roll_in_alphabet(int i, int shift, int alphabet_size);
+
+enigma_rotor *enigma_rotor_init(const char *name);
+
 static void *encrypt_none_key_parse(const char *key);
 static void encrypt_none_key_free(void *key);
-static void encrypt_none_encode(char **str, void *key);
-static void encrypt_none_decode(char **code, void *key);
-static int roll_in_alphabet(int i, int shift, int alphabet_size);
+static void encrypt_none_encode(char **text, void *key);
+static void encrypt_none_decode(char **text, void *key);
 
-static int roll_in_alphabet(int i, int shift, int alphabet_size);
-
-static void encrypt_rail_fence_encode(char **str, void *key);
-static void encrypt_rail_fence_decode(char **code, void *key);
+static void encrypt_rail_fence_encode(char **text, void *key);
+static void encrypt_rail_fence_decode(char **text, void *key);
 
 static void *encrypt_caesar_key_parse(const char *key);
 static void encrypt_caesar_key_free(void *key);
-static void encrypt_caesar_encode(char **str, void *key);
-static void encrypt_caesar_decode(char **code, void *key);
+static void encrypt_caesar_encode(char **text, void *key);
+static void encrypt_caesar_decode(char **text, void *key);
 
 static void *encrypt_vigenere_key_parse(const char *key);
 static void encrypt_vigenere_key_free(void *key);
-static void encrypt_vigenere_encode(char **str, void *key);
-static void encrypt_vigenere_decode(char **code, void *key);
+static void encrypt_vigenere_encode(char **text, void *key);
+static void encrypt_vigenere_decode(char **text, void *key);
 
 static void encrypt_rot13_encode(char **text, void *key);
 
@@ -35,21 +36,21 @@ static void encrypt_atbash_encode(char **text, void *key);
 
 static void *encrypt_substitution_key_parse(const char *key);
 static void encrypt_substitution_key_free(void *key);
-static void encrypt_substitution_encode(char **str, void *key);
-static void encrypt_substitution_decode(char **code, void *key);
+static void encrypt_substitution_encode(char **text, void *key);
+static void encrypt_substitution_decode(char **text, void *key);
 
 static void *encrypt_pairwise_substitution_key_parse(const char *key);
 
-enigma_rotor *enigma_rotor_init(const char *name);
 static void *encrypt_enigma_single_rotor_key_parse(const char *key);
 static void encrypt_enigma_single_rotor_key_free(void *key);
-static void encrypt_enigma_single_rotor_encode(char **str, void *key);
-static void encrypt_enigma_single_rotor_decode(char **code, void *key);
+static void encrypt_enigma_single_rotor_encode(char **text, void *key);
+static void encrypt_enigma_single_rotor_decode(char **text, void *key);
 
 static void *encrypt_enigma_key_parse(const char *key);
 static void encrypt_enigma_key_free(void *key);
-static void encrypt_enigma_encode(char **str, void *key);
+static void encrypt_enigma_encode(char **text, void *key);
 
+/*implementations of functions from .h-file*/
 void encrypt_init()
 {
     encryptors[ENCRYPT_NONE].key_parse = &encrypt_none_key_parse;
@@ -138,6 +139,7 @@ int encrypt_fencryptor(const char *str) {
   return -1;
 }
 
+/*useful functions*/
 static int roll_in_alphabet(int i, int shift, int alphabet_size)
 {
     if (i < 0)
@@ -149,6 +151,52 @@ static int roll_in_alphabet(int i, int shift, int alphabet_size)
         i += alphabet_size;
 
     return i % alphabet_size;
+}
+
+enigma_rotor *enigma_rotor_init(const char *name)
+{
+    enigma_rotor *e_rotor_ptr;
+    if (name == NULL)
+        return NULL;
+    e_rotor_ptr = malloc(sizeof(enigma_rotor));
+
+    if (e_rotor_ptr == NULL)
+        return NULL;
+    e_rotor_ptr->key = NULL;
+
+    if (0 == strcmp(name,"B")) {
+        e_rotor_ptr->key = encrypt_pairwise_substitution_key_parse("yruhqsldpxngokmiebfzcwvjat");
+        e_rotor_ptr->turnover_marker = ' ';
+    }
+    if (0 == strcmp(name,"C")) {
+        e_rotor_ptr->key = encrypt_pairwise_substitution_key_parse("fvpjiaoyedrzxwgctkuqsbnmhl");
+        e_rotor_ptr->turnover_marker = ' ';
+    }
+    if (0 == strcmp(name,"I")) {
+        e_rotor_ptr->key = encrypt_substitution_key_parse("ekmflgdqvzntowyhxuspaibrcj");
+        e_rotor_ptr->turnover_marker = 'q';
+    }
+    if (0 == strcmp(name,"II")) {
+        e_rotor_ptr->key = encrypt_substitution_key_parse("ajdksiruxblhwtmcqgznpyfvoe");
+        e_rotor_ptr->turnover_marker = 'e';
+    }
+    if (0 == strcmp(name,"III")) {
+        e_rotor_ptr->key = encrypt_substitution_key_parse("bdfhjlcprtxvznyeiwgakmusqo");
+        e_rotor_ptr->turnover_marker = 'v';
+    }
+    if (0 == strcmp(name,"IV")) {
+        e_rotor_ptr->key = encrypt_substitution_key_parse("esovpzjayquirhxlnftgkdcmwb");
+        e_rotor_ptr->turnover_marker = 'j';
+    }
+    if (0 == strcmp(name,"V")) {
+        e_rotor_ptr->key = encrypt_substitution_key_parse("vzbrgityupsdnhlxawmjqofeck");
+        e_rotor_ptr->turnover_marker = 'z';
+    }
+    if (e_rotor_ptr->key == NULL) {
+        free(e_rotor_ptr);
+        return NULL;
+    }
+    return e_rotor_ptr;
 }
 
 /*Do not encrypt data*/
@@ -164,15 +212,15 @@ static void encrypt_none_key_free(void *key)
     (void)key;
 }
 
-static void encrypt_none_encode(char **str, void *key)
+static void encrypt_none_encode(char **text, void *key)
 {
-    (void)str;
+    (void)text;
     (void)key;
 }
 
-static void encrypt_none_decode(char **code, void *key)
+static void encrypt_none_decode(char **text, void *key)
 {
-    (void)code;
+    (void)text;
     (void)key;
 }
 
@@ -286,11 +334,11 @@ static void encrypt_caesar_encode(char **text, void *key)
     }
 }
 
-static void encrypt_caesar_decode(char **codetext, void *key)
+static void encrypt_caesar_decode(char **text, void *key)
 {
     int i, let, upper;
     int letshift = (-1) * *((int *)key);
-    char *code = *codetext;
+    char *code = *text;
     for (i = 0; code[i] != '\0'; i++) {
         if (!isalpha(code[i]))
             continue;
@@ -355,10 +403,10 @@ static void encrypt_vigenere_encode(char **text, void *key)
     }
 }
 
-static void encrypt_vigenere_decode(char **codetext, void *key)
+static void encrypt_vigenere_decode(char **text, void *key)
 {
     int i, let, upper;
-    char *code = *codetext;
+    char *code = *text;
     int letshift, letshift_cnt = 0;
     for (i = 0; code[i] != '\0'; i++) {
         if (!isalpha(code[i]))
@@ -469,10 +517,10 @@ static void encrypt_substitution_encode(char **text, void *key)
     }
 }
 
-static void encrypt_substitution_decode(char **codetext, void *key)
+static void encrypt_substitution_decode(char **text, void *key)
 {
     int i, j, let, upper;
-    char *code = *codetext;
+    char *code = *text;
     for (i = 0; code[i] != '\0'; i++) {
         if (!isalpha(code[i]))
             continue;
@@ -523,52 +571,6 @@ static void *encrypt_pairwise_substitution_key_parse(const char *key)
 
 /*single-Rotor-Enigma*/
 
-enigma_rotor *enigma_rotor_init(const char *name)
-{
-    enigma_rotor *e_rotor_ptr;
-    if (name == NULL)
-        return NULL;
-    e_rotor_ptr = malloc(sizeof(enigma_rotor));
-
-    if (e_rotor_ptr == NULL)
-        return NULL;
-    e_rotor_ptr->key = NULL;
-
-    if (0 == strcmp(name,"B")) {
-        e_rotor_ptr->key = encrypt_pairwise_substitution_key_parse("yruhqsldpxngokmiebfzcwvjat");
-        e_rotor_ptr->turnover_marker = ' ';
-    }
-    if (0 == strcmp(name,"C")) {
-        e_rotor_ptr->key = encrypt_pairwise_substitution_key_parse("fvpjiaoyedrzxwgctkuqsbnmhl");
-        e_rotor_ptr->turnover_marker = ' ';
-    }
-    if (0 == strcmp(name,"I")) {
-        e_rotor_ptr->key = encrypt_substitution_key_parse("ekmflgdqvzntowyhxuspaibrcj");
-        e_rotor_ptr->turnover_marker = 'q';
-    }
-    if (0 == strcmp(name,"II")) {
-        e_rotor_ptr->key = encrypt_substitution_key_parse("ajdksiruxblhwtmcqgznpyfvoe");
-        e_rotor_ptr->turnover_marker = 'e';
-    }
-    if (0 == strcmp(name,"III")) {
-        e_rotor_ptr->key = encrypt_substitution_key_parse("bdfhjlcprtxvznyeiwgakmusqo");
-        e_rotor_ptr->turnover_marker = 'v';
-    }
-    if (0 == strcmp(name,"IV")) {
-        e_rotor_ptr->key = encrypt_substitution_key_parse("esovpzjayquirhxlnftgkdcmwb");
-        e_rotor_ptr->turnover_marker = 'j';
-    }
-    if (0 == strcmp(name,"V")) {
-        e_rotor_ptr->key = encrypt_substitution_key_parse("vzbrgityupsdnhlxawmjqofeck");
-        e_rotor_ptr->turnover_marker = 'z';
-    }
-    if (e_rotor_ptr->key == NULL) {
-        free(e_rotor_ptr);
-        return NULL;
-    }
-    return e_rotor_ptr;
-}
-
 static void *encrypt_enigma_single_rotor_key_parse(const char *key)
 {
     return (void *) enigma_rotor_init(key);
@@ -585,20 +587,20 @@ static void encrypt_enigma_single_rotor_key_free(void *key)
     free(e_rotor_ptr);
 }
 
-static void encrypt_enigma_single_rotor_encode(char **str, void *key)
+static void encrypt_enigma_single_rotor_encode(char **text, void *key)
 {
     enigma_rotor *e_rotor_ptr = (enigma_rotor *)key;
     if (key == NULL)
         return;
-    encrypt_substitution_encode(str, e_rotor_ptr->key);
+    encrypt_substitution_encode(text, e_rotor_ptr->key);
 }
 
-static void encrypt_enigma_single_rotor_decode(char **code, void *key)
+static void encrypt_enigma_single_rotor_decode(char **text, void *key)
 {
     enigma_rotor *e_rotor_ptr = (enigma_rotor *)key;
     if (key == NULL)
         return;
-    encrypt_substitution_decode(code, e_rotor_ptr->key);
+    encrypt_substitution_decode(text, e_rotor_ptr->key);
 }
 
 /*Enigma (multiple rotors)*/
@@ -649,7 +651,7 @@ static void *encrypt_enigma_key_parse(const char *key)
         return NULL;
     }
     e_ptr->reflector = enigma_rotor_init(textpart);
-    /*printf("%p", e_ptr->reflector);*/
+
     if (e_ptr->reflector == NULL || e_ptr->rotor_left == NULL || e_ptr->rotor_middle == NULL || e_ptr->rotor_right == NULL) {
         encrypt_enigma_key_free(&e_ptr);
         return NULL;
