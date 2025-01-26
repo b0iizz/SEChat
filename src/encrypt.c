@@ -156,42 +156,56 @@ static int roll_in_alphabet(int i, int shift, int alphabet_size)
 enigma_rotor *enigma_rotor_init(const char *name)
 {
     enigma_rotor *e_rotor_ptr;
+    char *name_cpy;
+    int i;
+
     if (name == NULL)
         return NULL;
     e_rotor_ptr = malloc(sizeof(enigma_rotor));
-
     if (e_rotor_ptr == NULL)
         return NULL;
+
+    name_cpy = malloc((strlen(name) + 1) * sizeof(char));
+    if (name_cpy == NULL) {
+        free(e_rotor_ptr);
+        return NULL;
+    }
+
+    strcpy(name_cpy, name);
+    for (i = 0; i < (int) strlen(name_cpy); i++) {
+        name_cpy[i] = toupper(name_cpy[i]);
+    }
+
     e_rotor_ptr->key = NULL;
 
-    if (0 == strcmp(name,"B")) {
+    if (0 == strcmp(name_cpy, "A")) {
+        e_rotor_ptr->key = encrypt_pairwise_substitution_key_parse("ejmzalyxvbwfcrquontspikhgd");
+        e_rotor_ptr->turnover_marker = ' ';
+    } else if (0 == strcmp(name_cpy, "B")) {
         e_rotor_ptr->key = encrypt_pairwise_substitution_key_parse("yruhqsldpxngokmiebfzcwvjat");
         e_rotor_ptr->turnover_marker = ' ';
-    }
-    if (0 == strcmp(name,"C")) {
+    } else if (0 == strcmp(name_cpy, "C")) {
         e_rotor_ptr->key = encrypt_pairwise_substitution_key_parse("fvpjiaoyedrzxwgctkuqsbnmhl");
         e_rotor_ptr->turnover_marker = ' ';
-    }
-    if (0 == strcmp(name,"I")) {
+    } else if (0 == strcmp(name_cpy, "I")) {
         e_rotor_ptr->key = encrypt_substitution_key_parse("ekmflgdqvzntowyhxuspaibrcj");
         e_rotor_ptr->turnover_marker = 'q';
-    }
-    if (0 == strcmp(name,"II")) {
+    } else if (0 == strcmp(name_cpy, "II")) {
         e_rotor_ptr->key = encrypt_substitution_key_parse("ajdksiruxblhwtmcqgznpyfvoe");
         e_rotor_ptr->turnover_marker = 'e';
-    }
-    if (0 == strcmp(name,"III")) {
+    } else if (0 == strcmp(name_cpy, "III")) {
         e_rotor_ptr->key = encrypt_substitution_key_parse("bdfhjlcprtxvznyeiwgakmusqo");
         e_rotor_ptr->turnover_marker = 'v';
-    }
-    if (0 == strcmp(name,"IV")) {
+    } else if (0 == strcmp(name_cpy, "IV")) {
         e_rotor_ptr->key = encrypt_substitution_key_parse("esovpzjayquirhxlnftgkdcmwb");
         e_rotor_ptr->turnover_marker = 'j';
-    }
-    if (0 == strcmp(name,"V")) {
+    } else if (0 == strcmp(name_cpy, "V")) {
         e_rotor_ptr->key = encrypt_substitution_key_parse("vzbrgityupsdnhlxawmjqofeck");
         e_rotor_ptr->turnover_marker = 'z';
     }
+
+    free(name_cpy);
+
     if (e_rotor_ptr->key == NULL) {
         free(e_rotor_ptr);
         return NULL;
