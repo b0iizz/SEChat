@@ -112,6 +112,7 @@ void encrypt_init()
 const char *encrypt_strencryptor(int encryptor) {
   switch (encryptor) {
    case ENCRYPT_NONE: return "No Encryption (none)";
+   case ENCRYPT_RAIL_FENCE: return "Rail Fence Encryption (rail-fence)";
    case ENCRYPT_CAESAR: return "Caesar Chiffre (caesar)";
    case ENCRYPT_VIGENERE: return "Vigenere Chiffre (vigenere)";
    case ENCRYPT_ROT13: return "Rot13 Method (rot13)";
@@ -127,6 +128,7 @@ const char *encrypt_strencryptor(int encryptor) {
 
 int encrypt_fencryptor(const char *str) {
   if (!strcmp(str, "none")) return ENCRYPT_NONE;
+  if (!strcmp(str, "rail-fence")) return ENCRYPT_RAIL_FENCE;
   if (!strcmp(str, "caesar")) return ENCRYPT_CAESAR;
   if (!strcmp(str, "vigenere")) return ENCRYPT_VIGENERE;
   if (!strcmp(str, "rot13")) return ENCRYPT_ROT13;
