@@ -15,7 +15,6 @@ static size_t person_count = 0;
 
 static char **person_encrypt_plain[ENCRYPT_MAX_VAL] = {0};
 static void **person_encrypt_key[ENCRYPT_MAX_VAL] = {0};
-static void **person_encrypt_state[ENCRYPT_MAX_VAL] = {0};
 
 static int person_exists(int who);
 static netResult person_make(int who);
@@ -88,21 +87,19 @@ netResult net_reset()
   free(messages);
   messages = NULL;
   messages_count = 0;
+  message_last_seen = -1;
 
   for (i = 0; i < ENCRYPT_MAX_VAL; i++) {
     for (j = 0; j < person_count; j++)
       if (person_name[j]) {
         free(person_encrypt_plain[i][j]);
         encryptors[i].key_free(person_encrypt_key[i][j]);
-        encryptors[i].state_free(person_encrypt_state[i][j]);
       }
     free(person_encrypt_plain[i]);
     free(person_encrypt_key[i]);
-    free(person_encrypt_state[i]);
   }
   memset(person_encrypt_plain, 0, sizeof(*person_encrypt_plain) * ENCRYPT_MAX_VAL);
   memset(person_encrypt_key, 0, sizeof(*person_encrypt_key) * ENCRYPT_MAX_VAL);
-  memset(person_encrypt_state, 0, sizeof(*person_encrypt_state) * ENCRYPT_MAX_VAL);
 
   for (i = 0; i < person_count; i++) free(person_name[i]);
   free(person_name);
@@ -166,6 +163,7 @@ netResult net_name_set(int person, const char *name)
 
   if (is_server && !person_exists(person)) return NET_ERROR;
   if (!is_server && person != self_person_id) return NET_ERROR;
+  if (!is_server && person < 0) return NET_ERROR;
 
   update.type = NET_PROTO_PERSON;
   update.as.person.person_id = person;
@@ -231,13 +229,15 @@ netResult net_key_set(int person, int method, const char *key)
   if (person_encrypt_plain[method][person]) {
     free(person_encrypt_plain[method][person]);
     encryptors[method].key_free(person_encrypt_key[method][person]);
-    encryptors[method].state_free(person_encrypt_state[method][person]);
   }
 
   result = util_strcpy(&person_encrypt_plain[method][person], key, NET_SUCCESS, NET_ERROR);
   if (result == NET_SUCCESS) {
     person_encrypt_key[method][person] = encryptors[method].key_parse(key);
-    person_encrypt_state[method][person] = encryptors[method].state_alloc();
+    if (!person_encrypt_key[method][person]) {
+      free(person_encrypt_plain[method][person]);
+      person_encrypt_plain[method][person] = NULL;
+    }
   }
   return result;
 }
@@ -275,9 +275,15 @@ netResult net_message_send(int encryption, const char *message)
   packet.type = NET_PROTO_MESSAGE;
   packet.as.message.person_id = self_person_id;
   packet.as.message.index = -1;
-  packet.as.message.encryption = encryption;
+  packet.as.message.encryption =
+      person_encrypt_plain[encryption][self_person_id] ? encryption : ENCRYPT_NONE;
   packet.as.message.message = NULL;
   result = util_strcpy(&packet.as.message.message, message, NET_SUCCESS, NET_ERROR);
+
+  if (person_encrypt_plain[encryption][self_person_id]) {
+    encryptors[encryption].encode(&packet.as.message.message,
+                                  person_encrypt_key[encryption][self_person_id]);
+  }
 
   if (result == NET_SUCCESS)
     result = packet_serialize(&outgoing, &packet) == PACKET_SUCCESS ? NET_SUCCESS : NET_ERROR;
@@ -307,7 +313,7 @@ netResult net_message_recv(struct net_message *buffer, size_t *count, size_t lim
   if (flags & NET_FHISTORY) {
     read_start = message_last_seen - limit;
     read_start = read_start > 0 ? read_start : 0;
-    max_count = message_last_seen - read_start;
+    max_count = message_last_seen - read_start + 1;
   } else {
     read_start = message_last_seen + 1;
     max_count = messages_count - read_start;
@@ -328,8 +334,7 @@ netResult net_message_recv(struct net_message *buffer, size_t *count, size_t lim
     if (person_exists(buffer[idx].person_id)
         && person_encrypt_plain[buffer[idx].encryption][buffer[idx].person_id]) {
       encryptors[buffer[idx].encryption].decode(
-          &buffer[idx].message, person_encrypt_key[buffer[idx].encryption][buffer[idx].person_id],
-          person_encrypt_state[buffer[idx].encryption][buffer[idx].person_id]);
+          &buffer[idx].message, person_encrypt_key[buffer[idx].encryption][buffer[idx].person_id]);
     }
   }
   *count = idx;
@@ -373,7 +378,9 @@ static int person_exists(int who)
 
 static netResult person_make(int who)
 {
+  int i;
   netResult result;
+
   if (is_server < 0) return NET_ERROR;
   if (who < 0) return NET_ERROR;
   if (person_exists(who)) return NET_ERROR;
@@ -393,12 +400,6 @@ static netResult person_make(int who)
       if (!person_encrypt_key[i]) return NET_ERROR;
       memset(person_encrypt_key[i] + person_count, 0,
              (who + 1 - person_count) * sizeof(*person_encrypt_key[i]));
-
-      person_encrypt_state[i] =
-          realloc(person_encrypt_state[i], (who + 1) * sizeof(*person_encrypt_state[i]));
-      if (!person_encrypt_state[i]) return NET_ERROR;
-      memset(person_encrypt_state[i] + person_count, 0,
-             (who + 1 - person_count) * sizeof(*person_encrypt_state[i]));
     }
     person_name = realloc(person_name, (who + 1) * sizeof(*person_name));
     memset(person_name + person_count, 0, (who + 1 - person_count) * sizeof(*person_name));
@@ -406,12 +407,10 @@ static netResult person_make(int who)
   }
 
 
-  result = util_strcpy(&person_name[who], "", NET_SUCCESS, NET_ERROR);
-  if (result == NET_SUCCESS) {
-    result = util_strcpy(&person_encrypt_plain[ENCRYPT_NONE][who], "", NET_SUCCESS, NET_ERROR);
-    person_encrypt_key[ENCRYPT_NONE][who] = encryptors[ENCRYPT_NONE].key_parse("");
-    person_encrypt_state[ENCRYPT_NONE][who] = encryptors[ENCRYPT_NONE].state_alloc();
-  }
+  result = util_strcpy(&person_name[who], "(anon)", NET_SUCCESS, NET_ERROR);
+
+  if (result == NET_SUCCESS)
+    for (i = 0; i < ENCRYPT_MAX_VAL; i++) { net_key_set(who, i, ""); }
 
   return result;
 }
@@ -431,8 +430,6 @@ static netResult person_free(int who)
     person_encrypt_plain[i][who] = NULL;
     encryptors[i].key_free(person_encrypt_key[i][who]);
     person_encrypt_key[i][who] = NULL;
-    encryptors[i].state_free(person_encrypt_state[i][who]);
-    person_encrypt_state[i][who] = NULL;
   }
 
   return NET_SUCCESS;
@@ -594,6 +591,7 @@ static netResult handle_packet_person(connection_t sender, struct protocol_packe
   }
 
   if (result == NET_SUCCESS) {
+    if (person_name[packet->as.person.person_id]) free(person_name[packet->as.person.person_id]);
     result = util_strcpy(&person_name[packet->as.person.person_id], packet->as.person.name,
                          NET_SUCCESS, NET_ERROR);
   }

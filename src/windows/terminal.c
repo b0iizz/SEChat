@@ -106,7 +106,7 @@ txpResult txp_recv(char *buffer, size_t *nread, size_t blen)
 {
   DWORD can_read, did_read;
   INPUT_RECORD input;
-  char buf[11];
+  char buf[17];
   CONSOLE_SCREEN_BUFFER_INFO info;
   *nread = 0;
 

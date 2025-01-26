@@ -12,6 +12,7 @@ enigma_rotor *enigma_rotor_init(const char *name);
 
 static void *encrypt_none_key_parse(const char *key);
 static void encrypt_none_key_free(void *key);
+
 static void encrypt_none_encode(char **text, void *key);
 static void encrypt_none_decode(char **text, void *key);
 
@@ -20,8 +21,6 @@ static void encrypt_rail_fence_decode(char **text, void *key);
 
 static void *encrypt_caesar_key_parse(const char *key);
 static void encrypt_caesar_key_free(void *key);
-static void encrypt_caesar_encode(char **text, void *key);
-static void encrypt_caesar_decode(char **text, void *key);
 
 static void *encrypt_vigenere_key_parse(const char *key);
 static void encrypt_vigenere_key_free(void *key);
@@ -38,6 +37,7 @@ static void *encrypt_substitution_key_parse(const char *key);
 static void encrypt_substitution_key_free(void *key);
 static void encrypt_substitution_encode(char **text, void *key);
 static void encrypt_substitution_decode(char **text, void *key);
+
 
 static void *encrypt_pairwise_substitution_key_parse(const char *key);
 
@@ -125,7 +125,6 @@ const char *encrypt_strencryptor(int encryptor) {
    default: return "Invalid Method!";
   }
 }
-
 int encrypt_fencryptor(const char *str) {
   if (!strcmp(str, "none")) return ENCRYPT_NONE;
   if (!strcmp(str, "rail-fence")) return ENCRYPT_RAIL_FENCE;
@@ -141,7 +140,6 @@ int encrypt_fencryptor(const char *str) {
   return -1;
 }
 
-/*useful functions*/
 static int roll_in_alphabet(int i, int shift, int alphabet_size)
 {
     if (i < 0)

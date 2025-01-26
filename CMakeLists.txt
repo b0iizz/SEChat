@@ -5,6 +5,7 @@ set(CMAKE_C_STANDARD 90)
 set(CMAKE_C_STANDARD_REQUIRED TRUE)
 
 option(tidy "Use clang-tidy to improve code style in the project" OFF)
+option(debug "Do not optimize code and turn on debugging compile options" ON)
 
 if(tidy AND UNIX)
   set (CMAKE_C_USE_RESPONSE_FILE_FOR_INCLUDES Off)
@@ -36,7 +37,12 @@ endif()
 
 add_executable(sechat ${sources} ${platform_sources})
 
+if(debug)
+target_compile_options(sechat PUBLIC -Wall -Wextra -pedantic -O0 -g)
+else()
 target_compile_options(sechat PUBLIC -Wall -Wextra -pedantic -O2)
+endif()
+
 target_include_directories(sechat PUBLIC src)
 
 if(WIN32)

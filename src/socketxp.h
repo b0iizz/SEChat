@@ -14,6 +14,9 @@ typedef WSAPOLLFD pollsxp_t;
 typedef struct addrinfo addrinfo_t;
 typedef struct sockaddr sockaddr_t;
 
+#define SXP_POLLIN POLLRDNORM
+#define SXP_POLLOUT POLLWRNORM
+
 #else
 
 #ifndef _POSIX_C_SOURCE
@@ -31,6 +34,10 @@ typedef int sxp_t;
 typedef struct pollfd pollsxp_t;
 typedef struct addrinfo addrinfo_t;
 typedef struct sockaddr sockaddr_t;
+
+#define SXP_POLLIN POLLIN
+#define SXP_POLLOUT POLLOUT
+
 #endif
 
 typedef int sxpResult;

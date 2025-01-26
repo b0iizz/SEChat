@@ -6,7 +6,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <windows.h>
-#include <conio.h>
 
 typedef struct {
     DWORD input_mode;
