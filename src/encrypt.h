@@ -9,10 +9,8 @@ enum encrypttype { ENCRYPT_NONE = 0, ENCRYPT_RAIL_FENCE, ENCRYPT_CAESAR, ENCRYPT
 typedef struct encryption_type {
     void *(*key_parse)(const char *key);
     void (*key_free)(void *key);
-    void *(*state_alloc)();
-    void (*state_free)(void *state);
-    void (*encode)(char **str, void *key, void *state);
-    void (*decode)(char **code, void *key, void *state);
+    void (*encode)(char **str, void *key);
+    void (*decode)(char **code, void *key);
 } encryptor_t;
 
 
@@ -33,5 +31,8 @@ typedef struct _enigma {
 extern encryptor_t encryptors[ENCRYPT_MAX_VAL];
 
 void encrypt_init();
+
+const char *encrypt_strencryptor(int encryptor);
+int encrypt_fencryptor(const char *str);
 
 #endif
