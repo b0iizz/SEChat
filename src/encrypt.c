@@ -21,6 +21,9 @@ static void encrypt_rail_fence_decode(char **text, void *key);
 
 static void *encrypt_caesar_key_parse(const char *key);
 static void encrypt_caesar_key_free(void *key);
+static void encrypt_caesar_encode(char **text, void *key);
+static void encrypt_caesar_decode(char **text, void *key);
+
 
 static void *encrypt_vigenere_key_parse(const char *key);
 static void encrypt_vigenere_key_free(void *key);
