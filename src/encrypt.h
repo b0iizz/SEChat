@@ -15,7 +15,7 @@ typedef struct encryption_type {
 
 
 typedef struct _enigma_rotor{
-    char turnover_marker;
+    char turnover_markers[2];
     void *key;
 } enigma_rotor;
 

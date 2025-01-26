@@ -177,31 +177,42 @@ enigma_rotor *enigma_rotor_init(const char *name)
     }
 
     e_rotor_ptr->key = NULL;
+    e_rotor_ptr->turnover_markers[0] = '\0';
+    e_rotor_ptr->turnover_markers[1] = '\0';
 
     if (0 == strcmp(name_cpy, "A")) {
         e_rotor_ptr->key = encrypt_pairwise_substitution_key_parse("ejmzalyxvbwfcrquontspikhgd");
-        e_rotor_ptr->turnover_marker = ' ';
     } else if (0 == strcmp(name_cpy, "B")) {
         e_rotor_ptr->key = encrypt_pairwise_substitution_key_parse("yruhqsldpxngokmiebfzcwvjat");
-        e_rotor_ptr->turnover_marker = ' ';
     } else if (0 == strcmp(name_cpy, "C")) {
         e_rotor_ptr->key = encrypt_pairwise_substitution_key_parse("fvpjiaoyedrzxwgctkuqsbnmhl");
-        e_rotor_ptr->turnover_marker = ' ';
     } else if (0 == strcmp(name_cpy, "I")) {
         e_rotor_ptr->key = encrypt_substitution_key_parse("ekmflgdqvzntowyhxuspaibrcj");
-        e_rotor_ptr->turnover_marker = 'q';
+        e_rotor_ptr->turnover_markers[0] = 'q';
     } else if (0 == strcmp(name_cpy, "II")) {
         e_rotor_ptr->key = encrypt_substitution_key_parse("ajdksiruxblhwtmcqgznpyfvoe");
-        e_rotor_ptr->turnover_marker = 'e';
+        e_rotor_ptr->turnover_markers[0] = 'e';
     } else if (0 == strcmp(name_cpy, "III")) {
         e_rotor_ptr->key = encrypt_substitution_key_parse("bdfhjlcprtxvznyeiwgakmusqo");
-        e_rotor_ptr->turnover_marker = 'v';
+        e_rotor_ptr->turnover_markers[0] = 'v';
     } else if (0 == strcmp(name_cpy, "IV")) {
         e_rotor_ptr->key = encrypt_substitution_key_parse("esovpzjayquirhxlnftgkdcmwb");
-        e_rotor_ptr->turnover_marker = 'j';
+        e_rotor_ptr->turnover_markers[0] = 'j';
     } else if (0 == strcmp(name_cpy, "V")) {
         e_rotor_ptr->key = encrypt_substitution_key_parse("vzbrgityupsdnhlxawmjqofeck");
-        e_rotor_ptr->turnover_marker = 'z';
+        e_rotor_ptr->turnover_markers[0] = 'z';
+    } else if (0 == strcmp(name_cpy, "VI")) {
+        e_rotor_ptr->key = encrypt_substitution_key_parse("jpgvoumfyqbenhzrdkasxlictw");
+        e_rotor_ptr->turnover_markers[0] = 'z';
+        e_rotor_ptr->turnover_markers[1] = 'm';
+    } else if (0 == strcmp(name_cpy, "VII")) {
+        e_rotor_ptr->key = encrypt_substitution_key_parse("nzjhgrcxmyswboufaivlpekqdt");
+        e_rotor_ptr->turnover_markers[0] = 'z';
+        e_rotor_ptr->turnover_markers[1] = 'm';
+    } else if (0 == strcmp(name_cpy, "VIII")) {
+        e_rotor_ptr->key = encrypt_substitution_key_parse("fkqhtlxocbjspdzramewniuygv");
+        e_rotor_ptr->turnover_markers[0] = 'z';
+        e_rotor_ptr->turnover_markers[1] = 'm';
     }
 
     free(name_cpy);
@@ -740,11 +751,11 @@ static void encrypt_enigma_encode(char **text, void *key)
         let[0] = tolower(str[i]);
 
         /*step rotors*/
-        if (rotorshift[1] + 'a' == e_ptr->rotor_middle->turnover_marker) {
+        if ((rotorshift[1] + 'a' == e_ptr->rotor_middle->turnover_markers[0]) || (rotorshift[1] + 'a' == e_ptr->rotor_middle->turnover_markers[1])) {
             rotorshift[0] = roll_in_alphabet(rotorshift[0], 1, 26);
             rotorshift[1] = roll_in_alphabet(rotorshift[1], 1, 26);
             rotorshift[2] = roll_in_alphabet(rotorshift[2], 1, 26);
-        } else if (rotorshift[2] + 'a' == e_ptr->rotor_right->turnover_marker) {
+        } else if ((rotorshift[2] + 'a' == e_ptr->rotor_right->turnover_markers[0]) || (rotorshift[2] + 'a' == e_ptr->rotor_right->turnover_markers[1])) {
             rotorshift[1] = roll_in_alphabet(rotorshift[1], 1, 26);
             rotorshift[2] = roll_in_alphabet(rotorshift[2], 1, 26);
         } else {
