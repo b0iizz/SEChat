@@ -36,7 +36,7 @@ gcc -ansi -lm -Wall -Wextra -Wpedantic -O3 -o ./sechat main.o util.o interface.o
 ```bash
 gcc -ansi -lm -Wall -Wextra -Wpedantic -O3 -I./src/ -c src/windows/terminal.c
 gcc -ansi -lm -Wall -Wextra -Wpedantic -O3 -I./src/ -c src/windows/socket.c
-gcc -ansi -lm -Wall -Wextra -Wpedantic -O3 -o ./sechat.exe main.o util.o interface.o encrypt.o packet.o protocol.o netio.o net.o terminal.o socket.o
+gcc -ansi -lm -lwsock32 -lws2_32 -Wall -Wextra -Wpedantic -O3 -o ./sechat.exe main.o util.o interface.o encrypt.o packet.o protocol.o netio.o net.o terminal.o socket.o
 ```
 ## How to use
 *DE:* Um sechat zu benutzten kann man einfach ``sechat`` in die Kommandozeile eingeben. Optional kann auch ``sechat connect`` oder ``sechat serve``.
