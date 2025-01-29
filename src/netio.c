@@ -1,7 +1,7 @@
+#include "socketxp.h"
 #include "net.h"
 #include "netio.h"
 #include "packet.h"
-#include "socketxp.h"
 
 static struct netio_connection_info {
   connection_t connection;

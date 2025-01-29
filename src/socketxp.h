@@ -19,16 +19,17 @@ typedef struct sockaddr sockaddr_t;
 
 #else
 
-#ifndef _POSIX_C_SOURCE
+#if !defined(_POSIX_C_SOURCE) || _POSIX_C_SOURCE < 200112L
 #define _POSIX_C_SOURCE 200112L
+#define _POSIX_SOURCE 1
 #endif /*_POSIX_C_SOURCE*/
 
-#include <stdlib.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/poll.h>
 #include <netdb.h>
+#include <stdlib.h>
+#include <sys/poll.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 typedef int sxp_t;
 typedef struct pollfd pollsxp_t;
@@ -43,25 +44,25 @@ typedef struct sockaddr sockaddr_t;
 typedef int sxpResult;
 
 enum sxpresults {
-    SXP_SUCCESS = 0,
-    /*returned when operation whould block on nonblocking socket*/
-    SXP_TRY_AGAIN = 1,
-    /*returned when packet size is too large*/
-    SXP_TOO_BIG = 2,
-    /*returned when operation will complete asynchronously*/
-    SXP_ASYNC = 3,
-    /*returned when a platform-specific error occurred*/
-    SXP_ERROR_PLATFORM = -1,
-    /*returned when out of memory*/
-    SXP_ERROR_MEMORY = -2,
-    /*returned when one or multiple arguments are invalid*/
-    SXP_ERROR_INVAL = -3,
-    /*returned when a io or connection error occured*/
-    SXP_ERROR_IO = -4,
-    /*returned when the socket is/has been closed */
-    SXP_ERROR_CLOSED = -5,
-    /*returned when the reason for failure is not known*/
-    SXP_ERROR_UNKNOWN = -128
+  SXP_SUCCESS = 0,
+  /*returned when operation whould block on nonblocking socket*/
+  SXP_TRY_AGAIN = 1,
+  /*returned when packet size is too large*/
+  SXP_TOO_BIG = 2,
+  /*returned when operation will complete asynchronously*/
+  SXP_ASYNC = 3,
+  /*returned when a platform-specific error occurred*/
+  SXP_ERROR_PLATFORM = -1,
+  /*returned when out of memory*/
+  SXP_ERROR_MEMORY = -2,
+  /*returned when one or multiple arguments are invalid*/
+  SXP_ERROR_INVAL = -3,
+  /*returned when a io or connection error occured*/
+  SXP_ERROR_IO = -4,
+  /*returned when the socket is/has been closed */
+  SXP_ERROR_CLOSED = -5,
+  /*returned when the reason for failure is not known*/
+  SXP_ERROR_UNKNOWN = -128
 };
 
 enum sxpconfigs { SXP_BLOCKING = 0, SXP_NONBLOCKING = 1 };
@@ -90,7 +91,6 @@ sxpResult sxp_connect(sxp_t *sock, sockaddr_t *address, size_t addrlen);
 sxpResult sxp_send(sxp_t *sock, const char *data, size_t size);
 sxpResult sxp_recv(sxp_t *sock, char *data, size_t *num_read, size_t size);
 
-sxpResult sxp_poll(size_t /*maybe NULL*/ *results, pollsxp_t sxps[],
-                   size_t sxpcount, int timeout);
+sxpResult sxp_poll(size_t /*maybe NULL*/ *results, pollsxp_t sxps[], size_t sxpcount, int timeout);
 
 #endif /*SOCKETXP_H_*/

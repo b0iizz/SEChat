@@ -306,7 +306,7 @@ netResult net_message_send(int encryption, const char *message)
 netResult net_message_recv(struct net_message *buffer, size_t *count, size_t limit, int flags)
 {
   netResult result = NET_SUCCESS;
-  ssize_t read_start;
+  long int read_start;
   size_t max_count;
   size_t idx;
 
