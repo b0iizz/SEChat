@@ -365,13 +365,13 @@ static void command_decode(char **argv)
 
 static int handle_net_message(struct net_message *buffer)
 {
-    char tmp_buf[128];
+    char tmp_buf[255];
     char *name;
     if (net_name_get(buffer->person_id, &name) != NET_SUCCESS) {
         name = NULL;
     }
     sprintf(tmp_buf,
-            "%.80s said (encrypted with: %s):", name ? name : "Unknown User",
+            "%.80s said (encrypted with: %.80s):", name ? name : "Unknown User",
             encrypt_strencryptor(buffer->encryption));
     interface_message_send(tmp_buf);
     interface_message_send(buffer->message);
