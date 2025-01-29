@@ -5,7 +5,6 @@
 #include "util.h"
 #include <string.h>
 
-static int handle_arguments(int argc, char **argv);
 static void display_help(char **argv);
 static void command_connect(char **argv);
 static void command_serve(char **argv);
@@ -13,7 +12,7 @@ static void command_key(char **argv, int *self_encryption);
 static void command_encrypt(char **argv, int *encryption);
 static void command_name(char **argv);
 static void command_decode(char **argv);
-static int handle_command(const char *message, int *loop, int *encryption);
+static void handle_command(char **argv, int *loop, int *encryption);
 static int handle_net_message(struct net_message *buffer);
 
 int main(int argc, char **argv)
@@ -33,9 +32,7 @@ int main(int argc, char **argv)
         return 1;
 
     if (argc > 1) {
-        if (!handle_arguments(argc, argv)) {
-            net_reset();
-        }
+        handle_command(argv + 1, &loop, &encryption);
     }
 
     if (interface_status("SEChat", "!help - !quit") != UI_SUCCESS)
@@ -57,8 +54,21 @@ int main(int argc, char **argv)
         }
 
         while ((status = interface_message_recv(&input)) == UI_SUCCESS) {
-            if (handle_command(input, &loop, &encryption))
+            if (strlen(input) >= 1 && *input == '!') {
+                char *copy = NULL;
+                char **args = NULL;
+                ++input;
+                if (!util_strcpy(&copy, input, 1, 0))
+                    continue;
+                if (!util_split(&args, copy)) {
+                    free(copy);
+                    continue;
+                }
+                handle_command(args, &loop, &encryption);
+                free(args);
+                free(copy);
                 continue;
+            }
             if (net_message_send(encryption, input) != NET_SUCCESS) {
                 interface_message_send("### Could not send message!");
             }
@@ -90,52 +100,8 @@ int main(int argc, char **argv)
     return 0;
 }
 
-static int handle_arguments(int argc, char **argv)
+static void handle_command(char **argv, int *loop, int *encryption)
 {
-    int idx;
-
-    const char *ip = "127.0.0.1";
-    const char *port = "10001";
-
-    for (idx = 2; idx < argc; idx++) {
-        if (util_startswith(argv[idx], "ip=")) {
-            ip = argv[idx] + strlen("ip=");
-        }
-        if (util_startswith(argv[idx], "port=")) {
-            port = argv[idx] + strlen("port=");
-        }
-    }
-
-    if (!strcmp(argv[1], "serve")) {
-        interface_message_send("Listening on port:");
-        interface_message_send(port);
-        if (net_serve(port) != NET_SUCCESS)
-            return 0;
-    } else if (!strcmp(argv[1], "connect")) {
-        interface_message_send("Connecting on ip:");
-        interface_message_send(ip);
-        interface_message_send("And on port:");
-        interface_message_send(port);
-        if (net_connect(ip, port) != NET_SUCCESS)
-            return 0;
-    } else
-        return 0;
-    return 1;
-}
-
-static int handle_command(const char *message, int *loop, int *encryption)
-{
-    char *copy = NULL;
-    char **argv = NULL;
-    if (strlen(message) < 1 || *message != '!')
-        return 0;
-    ++message;
-    if (!util_strcpy(&copy, message, 1, 0))
-        return 1;
-    if (!util_split(&argv, copy)) {
-        free(copy);
-        return 1;
-    }
     if (!strcmp(argv[0], "quit") || !strcmp(argv[0], "q")) {
         *loop = 0;
     } else if (!strcmp(argv[0], "help") || !strcmp(argv[0], "h")) {
@@ -163,9 +129,6 @@ static int handle_command(const char *message, int *loop, int *encryption)
     } else if (!strcmp(argv[0], "decode") || !strcmp(argv[0], "dc")) {
         command_decode(argv);
     }
-    free(argv);
-    free(copy);
-    return 1;
 }
 
 static void display_help(char **argv)
