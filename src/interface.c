@@ -44,7 +44,7 @@ static int status_dirty = 1;
 #define STATUS_DIRTY status_dirty
 #endif
 
-static char command_buffer[COMMAND_BUF_LENGTH] = {0};
+static char command_buffer[COMMAND_BUF_LENGTH] = { 0 };
 
 static uiResult bounds_tick();
 
@@ -111,7 +111,8 @@ uiResult interface_message_send(const char *message)
     char *tmp_tok;
     char *tmp_copy;
 
-    if (!message) return UI_ERROR;
+    if (!message)
+        return UI_ERROR;
 
     tmp_copy = malloc(strlen(message) + 1);
     if (!tmp_copy)
@@ -340,7 +341,7 @@ csi_end:
 
 static uiResult input_tick()
 {
-    char readbuf[32] = {0};
+    char readbuf[32] = { 0 };
     size_t nread;
     size_t i;
     size_t j;
@@ -458,7 +459,7 @@ static uiResult render_status()
     sprintf(command_buffer,
             R_SCP R_CSI ";H" R_HL R_EL R_CSI ";%iH"
                         "%s" R_BRK R_CSI ";%iH"
-                        "%s" R_BRK R_SGRR  R_RCP,
+                        "%s" R_BRK R_SGRR R_RCP,
             title_pos, title, info_pos, info);
 
     if (txp_send(command_buffer) != TXP_SUCCESS)

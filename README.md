@@ -2,6 +2,7 @@
 *DE*: SEChat ist ein Chatraum CLI-Tool, mithilfe dessen Chatnachrichten verschlüsselt versandt werden können.
 Entstanden ist es im Rahmen einer Bonusaufgabe der Universität Augsburg im Kurs "Informatik 1" (WiSe24/25).
 Es werden keine Garantien für die tatsächliche Sicherheit der Kommunikation übernommen.
+
 *EN*: SEChat is a chat-room cli-tool that is able to send ecnrypted messages over the internet.
 This is the result of a semester exercise of the Ausgburg University of the course "Informatik 1" (CS 1) in the winter semester of 2024 to 2025.
 There are no guarantees about the actual security of messages being sent.
@@ -9,6 +10,7 @@ There are no guarantees about the actual security of messages being sent.
 ### Compiling & Installing using CMake
 *DE*: Die Einfachste Form das Programm zu Kompilieren ist mit dem Tool "CMake".
 Dazu müssen nur folgende Befehle im heruntergeladenen Ordner in die Kommandozeile eingegeben werden:
+
 *EN*: The easiest way to compile the program is with cmake. With it you just need to run the following command in the folder of the cloned repository:
 ```bash
 cmake . && make install
@@ -39,10 +41,12 @@ gcc -ansi -lm -Wall -Wextra -Wpedantic -O3 -o ./sechat.exe main.o util.o interfa
 ## How to use
 *DE:* Um sechat zu benutzten kann man einfach ``sechat`` in die Kommandozeile eingeben. Optional kann auch ``sechat connect`` oder ``sechat serve``.
 Diese sind gleichbedeutend mit der sofortigen Ausführung der Befehle ``!connect`` und ``!serve`` direkt nach Programmstart. Weiteres dazu unter *Befehle*.
+
 *EN*: To use sechat just type ``sechat`` on the command line and press enter.
 You can optionally add ``connect`` or ``serve`` as arguments, which do exactly the same as the commands ``!connect`` and ``!serve`` as you start the program.
 ### Basic use
 *DE:* Unten am Screen befindet sich ein Texteingabefeld. Darin können sowohl Nachrichten gesendet werden, als auch Befehle (beginnend mit ``!``) eingegeben werden.
+
 *EN:* At the bottom of the screen there is a text field from which you can send messages as well as execute commands (which alsways begin with ``!``).
 
 ### Befehle / Commands
