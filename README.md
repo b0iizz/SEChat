@@ -81,4 +81,4 @@ You can optionally add ``connect`` or ``serve`` as arguments, which do exactly t
 |Paarweise Vertauschung|Pairwise Substitution|``pair-substitution``|``a substitution table like badcfehgjilknmporqtsvuxwzy where each character is swapped with another in the alphabet``|
 |Monoalphabetische Substitution|substitution|``substitution``| ``an alphabet like abdyefghijklmnopqrstuvwxcz where each character appears exactly once``|
 |Enigma Rotor| a rotor of the enigma|``enigma-rotor``| ``one of: A, B, C, I, II, III, IV, V, VI, VII, VIII``|
-|Enigma|Enigma|``enigma``| ``Semicolon ';' separated list of: Rotor Left, Rotor Middle, Rotor Right, Rotor Reflector, three characters indicating rotor start positions and optionally a pairwise substitution key for the patchpanel``
+|Enigma|Enigma|``enigma``| ``Semicolon ';' separated list of: Rotor Left, Rotor Middle, Rotor Right, Rotor Reflector, three characters indicating rotor start positions and optionally a pairwise substitution key for the patchpanel`` **Examples:** ``V;II;VII;B;ehj`` or ``I;VIII;VI;C;def;badcfehgjilknmporqtsvuxwzy``
