@@ -66,3 +66,19 @@ You can optionally add ``connect`` or ``serve`` as arguments, which do exactly t
 |``!bottom``|``!bottom``|Scrolle nach ganz unten|Scroll to the bottom |
 |``!up``|``!up``|Scrolle einen Screen nach oben| Scrolle one page up|
 |``!down``|``!down``|Scrolle einen Screen nach unten| Scrolle one page down|
+
+###  Encryption methods
+
+|Name (DE)| Name (EN)| Name in Command|Key format|
+|:-|:-|:-|:-|
+|Keine Verschlüsselung|No Encryption|``none``|``/``|
+|Gartenzaun Transposition| Rail-fence transposition|``rail-fence``|``/``|
+|Rot13 Substitution| Rot13 substitution|``rot13``|``/``|
+|Rot47 Substitution| Rot47 substitution|``rot47``|``/``|
+|Atbash Substitution| Atbash substitution|``atbash``|``/``|
+|Caesar Chiffre|Caesar Chiffre|``caesar``| ``0-26`` |
+|Vigenere Chiffre|Vigenere Chiffre|``vigenere``| ``any word or text (no spaces)`` |
+|Paarweise Vertauschung|Pairwise Substitution|``pair-substitution``|``a substitution table like badcfehgjilknmporqtsvuxwzy where each character is swapped with another in the alphabet``|
+|Monoalphabetische Substitution|substitution|``substitution``| ``an alphabet like abdyefghijklmnopqrstuvwxcz where each character appears exactly once``|
+|Enigma Rotor| a rotor of the enigma|``enigma-rotor``| ``one of: A, B, C, I, II, III, IV, V, VI, VII, VIII``|
+|Enigma|Enigma|``enigma``| ``Semicolon ';' separated list of: Rotor Left, Rotor Middle, Rotor Right, Rotor Reflector, three characters indicating rotor start positions and optionally a pairwise substitution key for the patchpanel``
